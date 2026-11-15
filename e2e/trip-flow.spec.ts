@@ -61,6 +61,7 @@ async function installFixture(
   page: import("@playwright/test").Page,
   options: {
     guest?: boolean;
+    currency?: string;
     participant?: boolean;
     editor?: boolean;
     linkedMember?: boolean;
@@ -78,7 +79,7 @@ async function installFixture(
     start_date: "2026-11-01",
     end_date: "2026-11-04",
     timezone: "Asia/Bangkok",
-    base_currency: "THB",
+    base_currency: options.currency ?? "THB",
     status: "active",
   };
   const emergencyCards = [
@@ -237,7 +238,7 @@ async function installFixture(
       trip_id: tripId,
       paid_by_member_id: alice,
       amount_minor: 900,
-      currency: "THB",
+      currency: trip.base_currency,
       description: "Airport taxi",
       created_at: "2026-10-27T10:00:00Z",
       expense_date: null,
@@ -549,7 +550,7 @@ async function installFixture(
         trip_id: tripId,
         paid_by_member_id: args.p_payer_member_id,
         amount_minor: args.p_amount_minor,
-        currency: "THB",
+        currency: trip.base_currency,
         description: args.p_description,
         created_at: new Date().toISOString(),
         expense_date: args.p_expense_date,
@@ -678,6 +679,93 @@ async function expectInViewport(locator: import("@playwright/test").Locator) {
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-11-02T03:00:00.000Z") });
 });
+
+for (const { currency, valid, invalid, minor, corrected, correctedMinor } of [
+  {
+    currency: "JPY",
+    valid: "1000",
+    invalid: "1000.5",
+    minor: "1000",
+    corrected: "1001",
+    correctedMinor: "1001",
+  },
+  {
+    currency: "THB",
+    valid: "1.23",
+    invalid: "1.234",
+    minor: "123",
+    corrected: "1.24",
+    correctedMinor: "124",
+  },
+  {
+    currency: "KWD",
+    valid: "0.001",
+    invalid: "0.0001",
+    minor: "1",
+    corrected: "0.002",
+    correctedMinor: "2",
+  },
+]) {
+  test(`validates and saves ${currency} amounts in create and correction forms`, async ({
+    page,
+  }) => {
+    const fixture = await installFixture(page, { currency });
+    await page.goto("/");
+    await openTrip(page);
+    await page
+      .getByRole("navigation", { name: "Trip sections" })
+      .getByRole("button", { name: "Expenses", exact: true })
+      .click();
+    const entry = page.locator(".expense-entry");
+    await entry.locator(":scope > summary").click();
+    const amount = entry.getByLabel(`Amount (${currency})`);
+    await amount.fill("0");
+    expect(
+      await amount.evaluate(
+        (input) => input instanceof HTMLInputElement && input.checkValidity(),
+      ),
+    ).toBe(false);
+    await amount.fill(invalid);
+    expect(
+      await amount.evaluate(
+        (input) => input instanceof HTMLInputElement && input.checkValidity(),
+      ),
+    ).toBe(false);
+    await amount.fill(valid);
+    expect(
+      await amount.evaluate(
+        (input) => input instanceof HTMLInputElement && input.checkValidity(),
+      ),
+    ).toBe(true);
+    await entry
+      .getByLabel("What was it for?")
+      .fill(`Currency test ${currency}`);
+    await entry
+      .getByRole("button", { name: "Save expense", exact: true })
+      .click();
+    await expect
+      .poll(() => fixture.getSavedExpense())
+      .toMatchObject({ p_amount_minor: minor, p_currency: currency });
+    const expense = page
+      .locator("article.stop")
+      .filter({ hasText: `Currency test ${currency}` });
+    await expense.getByText("Correct expense", { exact: true }).click();
+    const correction = expense.locator("form");
+    const correctionAmount = correction.getByLabel(`Amount (${currency})`);
+    expect(
+      await correctionAmount.evaluate(
+        (input) => input instanceof HTMLInputElement && input.checkValidity(),
+      ),
+    ).toBe(true);
+    await correctionAmount.fill(corrected);
+    await correction
+      .getByRole("button", { name: "Save correction", exact: true })
+      .click();
+    await expect
+      .poll(() => fixture.getSavedCorrection())
+      .toMatchObject({ p_amount_minor: correctedMinor, p_currency: currency });
+  });
+}
 
 test.describe("destination-local expense date", () => {
   test.use({ timezoneId: "UTC" });

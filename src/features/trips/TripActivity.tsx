@@ -16,6 +16,7 @@ import {
 import {
   calculateBalances,
   currencyDigits,
+  currencyIncrement,
   parseMajorAmount,
   splitAmount,
   suggestSettlements,
@@ -1540,15 +1541,14 @@ export function TripActivity({
                 <input
                   name="amount"
                   type="number"
-                  min="0.01"
-                  step={
-                    currencyDigits(
-                      trip.base_currency,
-                      thai ? "th-TH" : "en",
-                    ) === 0
-                      ? "1"
-                      : `0.${"0".repeat(Math.max(0, currencyDigits(trip.base_currency, thai ? "th-TH" : "en") - 1))}1`
-                  }
+                  min={currencyIncrement(
+                    trip.base_currency,
+                    thai ? "th-TH" : "en",
+                  )}
+                  step={currencyIncrement(
+                    trip.base_currency,
+                    thai ? "th-TH" : "en",
+                  )}
                   inputMode="decimal"
                   required
                 />
@@ -1826,15 +1826,14 @@ export function TripActivity({
                         <input
                           name="amount"
                           type="number"
-                          min="0.01"
-                          step={
-                            currencyDigits(
-                              e.currency,
-                              thai ? "th-TH" : "en",
-                            ) === 0
-                              ? "1"
-                              : `0.${"0".repeat(Math.max(0, currencyDigits(e.currency, thai ? "th-TH" : "en") - 1))}1`
-                          }
+                          min={currencyIncrement(
+                            e.currency,
+                            thai ? "th-TH" : "en",
+                          )}
+                          step={currencyIncrement(
+                            e.currency,
+                            thai ? "th-TH" : "en",
+                          )}
                           required
                           defaultValue={minorToMajorInput(
                             e.amount_minor,

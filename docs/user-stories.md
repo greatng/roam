@@ -253,3 +253,9 @@ US34 verification: desktop/mobile itinerary interaction checks and the light/dar
 ## US35–US37 — accent day boundaries, expense dates and receipt photos
 
 Issues #35, #36 and #37 were opened before implementation. The English user stories, scope and numbered criteria are in [expense-receipts.md](stories/expense-receipts.md). Day headings gain accent boundaries; new expenses default to destination-local today; optional receipt photos attach to synced expenses with private access and on-device compression. Existing offline financial operations remain unchanged.
+
+## US38 — currency-correct expense amount validation
+
+Issue: https://github.com/greatng/wherewhere/issues/38
+
+As a traveler, I can save valid currency amounts without false browser step errors. AC1 uses the smallest positive currency unit as both min and step in create/correction forms (JPY: 1). AC2 preserves THB/USD 0.01 and allows KWD 0.001, retaining exact integer parsing, positive limits and offline idempotence. AC3 adds a real browser regression covering validity plus successful create/correction saves on desktop/mobile. The original JPY test failed on 1000 before the fix; all six JPY/THB/KWD browser cases pass afterward. Seven money tests, lint and production build pass. No migration is required.

@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateBalances,
+  currencyIncrement,
   parseMajorAmount,
   splitAmount,
   suggestSettlements,
 } from "../src/features/expenses/money";
 
 describe("integer expense arithmetic", () => {
+  it("uses each currency's smallest positive unit for amount controls", () => {
+    expect(currencyIncrement("JPY", "en")).toBe("1");
+    expect(currencyIncrement("THB", "en")).toBe("0.01");
+    expect(currencyIncrement("KWD", "en")).toBe("0.001");
+  });
   it("parses major amounts into exact minor units for each currency scale", () => {
     expect(parseMajorAmount("250.50", "THB", "en")).toBe(25050n);
     expect(parseMajorAmount("0.1", "USD", "en")).toBe(10n);
