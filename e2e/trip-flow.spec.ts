@@ -884,6 +884,20 @@ test("compresses a receipt before upload, displays it, and removes its private f
   ).toBeVisible();
   expect(fixtureState.getReceipts()).toEqual([]);
   expect(fixtureState.getUploadedReceipt()).toBeUndefined();
+  await input.setInputFiles({
+    name: "replacement.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(pngData, "base64"),
+  });
+  await expect
+    .poll(() =>
+      expense
+        .getByRole("img", { name: "Compressed receipt preview" })
+        .evaluate((image) =>
+          image instanceof HTMLImageElement ? image.naturalWidth : 0,
+        ),
+    )
+    .toBeGreaterThan(0);
 });
 
 test("removes receipt objects before permanently deleting a trip", async ({

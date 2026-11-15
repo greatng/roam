@@ -322,7 +322,7 @@ export function ReceiptAttachment({
         .delete()
         .eq("id", receipt.id);
       if (deleteError) throw deleteError;
-      setExpanded(false);
+      // Keep the native disclosure open for an immediate replacement photo.
       setViewAttempt(0);
       setSavedUrl(null);
       setPhoto(null);
