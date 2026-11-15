@@ -46,6 +46,7 @@ test("private expense receipt metadata and Storage objects follow trip membershi
     const expense1 = "10000000-0000-4000-8000-000000000001";
     const expense2 = "10000000-0000-4000-8000-000000000002";
     const expense3 = "10000000-0000-4000-8000-000000000003";
+    const expense4 = "10000000-0000-4000-8000-000000000004";
     const member1 = "20000000-0000-4000-8000-000000000001";
     const member2 = "20000000-0000-4000-8000-000000000002";
     const member3 = "20000000-0000-4000-8000-000000000003";
@@ -58,7 +59,8 @@ test("private expense receipt metadata and Storage objects follow trip membershi
       insert into expenses(id,trip_id,paid_by_member_id,amount_minor,currency,description,client_operation_id) values
       ('${expense1}','${trip1}','${member1}',100,'USD','Dinner','30000000-0000-4000-8000-000000000001'),
       ('${expense2}','${trip1}','${member1}',200,'USD','Taxi','30000000-0000-4000-8000-000000000002'),
-      ('${expense3}','${trip2}','${otherTripMember}',300,'USD','Train','30000000-0000-4000-8000-000000000003');
+      ('${expense3}','${trip2}','${otherTripMember}',300,'USD','Train','30000000-0000-4000-8000-000000000003'),
+      ('${expense4}','${trip1}','${member1}',400,'USD','Hotel','30000000-0000-4000-8000-000000000004');
       insert into trip_invites(trip_id,token_hash,expires_at,max_uses) values ('${trip1}',repeat('b',64),now()+interval '1 day',1);
       insert into trip_join_requests(trip_id,invite_id,auth_user_id,requested_display_name) select '${trip1}',id,'${pending}','Pending' from trip_invites where trip_id='${trip1}'`);
 
@@ -78,6 +80,47 @@ test("private expense receipt metadata and Storage objects follow trip membershi
         )
       ).rows[0],
     ).toEqual({ status: "pending", uploaded_by: uploader });
+
+    // Storage checks INSERT authorization before the actual upload has written
+    // its final object metadata. The uploader's permission probe includes
+    // contentLength, not the final metadata.size field. Keep the probe isolated
+    // in a savepoint so this test never leaves a Storage object behind.
+    const probeAs = async (
+      userId: string,
+      objectPath: string,
+      metadata: Record<string, unknown> = { mimetype: "image/jpeg", contentLength: 1200 },
+    ) => {
+      await db.exec(`set request.jwt.claim.sub='${userId}'; begin; savepoint receipt_permission_probe`);
+      let allowed = false;
+      try {
+        await db.query(
+          `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts',$1,$2::jsonb)`,
+          [objectPath, JSON.stringify(metadata)],
+        );
+        allowed = true;
+      } catch {
+        // An RLS error aborts the statement; rollback keeps the session usable.
+      } finally {
+        await db.exec("rollback to savepoint receipt_permission_probe; rollback");
+      }
+      return allowed;
+    };
+    expect(await probeAs(uploader, receipt.object_path)).toBe(true);
+    // Older Storage permission probes may send empty metadata.
+    expect(await probeAs(uploader, receipt.object_path, {})).toBe(true);
+    expect(await probeAs(member, receipt.object_path)).toBe(false);
+    expect(await probeAs(removed, receipt.object_path)).toBe(false);
+    expect(await probeAs(outsider, receipt.object_path)).toBe(false);
+    await db.exec(`set request.jwt.claim.sub='${uploader}'`);
+    const deletedExpenseReceipt = (
+      await db.query<{ id: string; object_path: string }>(
+        `insert into expense_receipts(trip_id,expense_id,byte_size) values ('${trip1}','${expense4}',1200) returning id,object_path`,
+      )
+    ).rows[0];
+    await db.exec("reset role");
+    await db.query(`update expenses set deleted_at=now() where id='${expense4}'`);
+    await db.exec(`set role authenticated; set request.jwt.claim.sub='${uploader}'`);
+    expect(await probeAs(uploader, deletedExpenseReceipt.object_path)).toBe(false);
     await expect(
       db.query(
         `insert into expense_receipts(id,trip_id,expense_id,uploaded_by,byte_size) values ('40000000-0000-4000-8000-000000000001','${trip1}','${expense2}','${member}',1200)`,
@@ -118,11 +161,23 @@ test("private expense receipt metadata and Storage objects follow trip membershi
         `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts','${trip1}/wrong.jpg','{"mimetype":"image/jpeg","size":1200}')`,
       ),
     ).rejects.toThrow();
+    // Raw SQL can model metadata that the Storage API's bucket configuration
+    // would reject (wrong MIME or excessive actual object size). The database
+    // finalization trigger must still reject mismatched final object metadata.
+    await db.query(
+      `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts','${receipt.object_path}','{"mimetype":"image/png","size":1200}')`,
+    );
     await expect(
-      db.query(
-        `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts','${receipt.object_path}','{"mimetype":"image/png","size":1200}')`,
-      ),
-    ).rejects.toThrow();
+      db.query(`update expense_receipts set status='ready' where id='${receipt.id}'`),
+    ).rejects.toThrow(/matching JPEG receipt object/i);
+    await db.query(`delete from storage.objects where name='${receipt.object_path}'`);
+    await db.query(
+      `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts','${receipt.object_path}','{"mimetype":"image/jpeg","size":1199}')`,
+    );
+    await expect(
+      db.query(`update expense_receipts set status='ready' where id='${receipt.id}'`),
+    ).rejects.toThrow(/matching JPEG receipt object/i);
+    await db.query(`delete from storage.objects where name='${receipt.object_path}'`);
     await db.query(
       `insert into storage.objects(bucket_id,name,metadata) values ('expense-receipts','${receipt.object_path}','{"mimetype":"image/jpeg","size":1200}')`,
     );

@@ -30,3 +30,9 @@ The migration is applied to project `bsuzmybuskeadtofvjbz`. Read-only checks con
 Organizers can use the trash icon labelled **Delete expense** on an active trip, then confirm. A version-checked server call removes the expense from active lists and balances; correction history and its operation ID are retained to prevent stale offline operations from recreating it. Recorded settlements are preserved because they represent real payments. Guests and plan editors cannot delete expenses.
 
 Receipt files and metadata are cleaned after financial deletion. If cleanup fails, **Receipt cleanup pending** and **Retry receipt cleanup** let the organizer finish it without restoring the expense. The uploader and organizer retain cleanup access; other members cannot download the deleted receipt. Apply migration `20261115060549_delete_expenses.sql` after the receipt migration before deploying this frontend. Existing installations should review migration history before applying it, using the normal CLI workflow or the Dashboard SQL Editor.
+
+### Upload permission probe fix (US41)
+
+Apply `20261115082235_receipt_storage_permission_probe.sql` after the earlier migrations. Storage authorization happens before final object size is available; do not add final-size checks to the INSERT policy. Keep the private bucket MIME/size limits and ready-finalization trigger.
+
+Both receipt forms offer **Choose file** and **Take photo**. Camera capture depends on native browser/device support and falls back to its picker. Both paths use the same compression.

@@ -5,6 +5,7 @@ import {
   RECEIPT_MAX_BYTES,
   type CompressedReceipt,
 } from "./compress";
+import { ReceiptSourcePicker } from "./ReceiptSourcePicker";
 
 export type ReceiptDraftPickerProps = {
   photo: CompressedReceipt | null;
@@ -84,20 +85,12 @@ export function ReceiptDraftPicker({
       class="receipt-draft-picker"
       aria-label={tr(thai, "Receipt photo", "รูปใบเสร็จ")}
     >
-      <label>
-        {tr(thai, "Receipt photo (optional)", "รูปใบเสร็จ (ไม่บังคับ)")}
-        <input
-          aria-label={tr(
-            thai,
-            "Receipt photo (optional)",
-            "รูปใบเสร็จ (ไม่บังคับ)",
-          )}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={chooseFile}
-          disabled={disabled || busy}
-        />
-      </label>
+      <ReceiptSourcePicker
+        label={tr(thai, "Receipt photo (optional)", "รูปใบเสร็จ (ไม่บังคับ)")}
+        thai={thai}
+        disabled={disabled || busy}
+        onChange={chooseFile}
+      />
       {photo && (
         <div class="receipt-draft-picker__preview">
           <img

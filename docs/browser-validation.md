@@ -162,3 +162,7 @@ All 63 desktop/mobile E2E cases pass; one desktop case is intentionally skipped 
 The complete local suite passed 83 E2E cases (one intentional desktop skip) and 86 unit/database tests. New cases create an expense and receipt together, persist the compressed Blob and original operation ID across reload, and retry a receipt after a stored financial acknowledgement without reissuing create_expense. Deletion cases cover cancellation, native confirmation, organizer-only controls, financial deletion before receipt removal, and cleanup failure/retry without restoring the expense. Separate PGlite tests verify balances, settlement/history retention, version and membership checks, stale-operation rejection, and private deleted-receipt access. Fixtures use synthetic data; no real expense was deleted for testing.
 
 [Mobile new expense with receipt](../artifacts/mobile-chromium-new-expense-with-receipt.png)
+
+## US41–US42 receipt follow-up
+
+Full suite: 85 passed, one intentional skip. Both new-expense and saved-expense forms exercise native filechooser events for Choose file and Take photo on desktop/mobile, then process a PNG through the shared compressor. Financial-save/photo-retry and reload regressions remain green. Updated review image: `artifacts/mobile-chromium-new-expense-with-receipt.png`. Physical camera hardware is not exercised by browser emulation.

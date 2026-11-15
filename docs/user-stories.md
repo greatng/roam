@@ -263,3 +263,7 @@ As a traveler, I can save valid currency amounts without false browser step erro
 ## US39–US40 — create with a receipt and delete expenses
 
 Issues #39 and #40 were opened before implementation. The English stories and acceptance criteria are in [expense-entry-and-deletion.md](stories/expense-entry-and-deletion.md). New-expense photos persist in the owner-scoped outbox; a confirmed financial ID prevents photo retries from creating a duplicate expense. Organizers can delete incorrect expenses with version checks, ledger recalculation and retry-safe receipt cleanup. This supersedes the earlier saved-expense-only photo flow in US37.
+
+## US41–US42 — receipt upload authorization and camera choices
+
+Issues #41 and #42 were opened before implementation. See [receipt-upload-and-camera.md](stories/receipt-upload-and-camera.md) for the English stories, numbered criteria and diagnosis.

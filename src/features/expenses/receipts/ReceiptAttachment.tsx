@@ -8,6 +8,7 @@ import {
   type CompressedReceipt,
 } from "./compress";
 import { loadExpenseReceipt, type ExpenseReceipt } from "./api";
+import { ReceiptSourcePicker } from "./ReceiptSourcePicker";
 
 export type ReceiptAttachmentProps = {
   expenseId: string;
@@ -399,16 +400,12 @@ export function ReceiptAttachment({
           </p>
         )}
         {active && receipt?.status === "pending" && canRetry && !photo && (
-          <label>
-            {tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
-            <input
-              aria-label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={chooseFile}
-              disabled={busy}
-            />
-          </label>
+          <ReceiptSourcePicker
+            label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
+            thai={thai}
+            disabled={busy}
+            onChange={chooseFile}
+          />
         )}
         {receipt?.status === "ready" && (
           <Button
@@ -434,16 +431,12 @@ export function ReceiptAttachment({
           />
         )}
         {active && !receipt && (
-          <label>
-            {tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
-            <input
-              aria-label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={chooseFile}
-              disabled={busy}
-            />
-          </label>
+          <ReceiptSourcePicker
+            label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
+            thai={thai}
+            disabled={busy}
+            onChange={chooseFile}
+          />
         )}
         {active && photo && (
           <>

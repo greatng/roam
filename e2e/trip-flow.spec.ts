@@ -997,6 +997,82 @@ test("creates an expense with a private receipt in one flow", async ({
   expect(fixture.getUploadedReceipt()).toBeDefined();
 });
 
+test("receipt source buttons open file and camera choosers in both expense flows", async ({
+  page,
+}) => {
+  await installFixture(page);
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#cf772a";
+    context.fillRect(0, 0, 640, 480);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  const image = {
+    name: "receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  };
+
+  const form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  const nativeChooserPromise = page.waitForEvent("filechooser");
+  await form.getByRole("button", { name: "Choose file" }).click();
+  const nativeChooser = await nativeChooserPromise;
+  expect(
+    await (await nativeChooser.element()).getAttribute("capture"),
+  ).toBeNull();
+  await nativeChooser.setFiles(image);
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+
+  const cameraChooserPromise = page.waitForEvent("filechooser");
+  await form.getByRole("button", { name: "Take photo" }).click();
+  const cameraChooser = await cameraChooserPromise;
+  expect(await (await cameraChooser.element()).getAttribute("capture")).toBe(
+    "environment",
+  );
+  await cameraChooser.setFiles(image);
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+
+  const expense = page
+    .locator("article.stop")
+    .filter({ hasText: "Airport taxi" });
+  await expense.getByText("Attach receipt", { exact: true }).click();
+  const attachmentNativePromise = page.waitForEvent("filechooser");
+  await expense.getByRole("button", { name: "Choose file" }).click();
+  const attachmentNative = await attachmentNativePromise;
+  expect(
+    await (await attachmentNative.element()).getAttribute("capture"),
+  ).toBeNull();
+  await attachmentNative.setFiles(image);
+  await expect(
+    expense.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+
+  const attachmentCameraPromise = page.waitForEvent("filechooser");
+  await expense.getByRole("button", { name: "Take photo" }).click();
+  const attachmentCamera = await attachmentCameraPromise;
+  expect(await (await attachmentCamera.element()).getAttribute("capture")).toBe(
+    "environment",
+  );
+  await attachmentCamera.setFiles(image);
+  await expect(
+    expense.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+});
+
 test("after financial save, a receipt upload retry never creates the expense again", async ({
   page,
 }) => {

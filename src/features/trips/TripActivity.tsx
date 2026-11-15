@@ -583,10 +583,15 @@ export function TripActivity({
               });
               if (!disposed)
                 setNotice(
-                  tr(
-                    "This item needs organizer help and remains saved on this device.",
-                    "รายการนี้ต้องให้ผู้จัดช่วยเหลือ และยังบันทึกอยู่ในอุปกรณ์",
-                  ),
+                  confirmedExpense && op.receipt
+                    ? tr(
+                        "Expense saved. Receipt access was denied; ask your organizer to check permissions, then retry the receipt below.",
+                        "บันทึกค่าใช้จ่ายแล้ว แต่ไม่มีสิทธิ์ส่งใบเสร็จ ให้ผู้จัดตรวจสอบสิทธิ์แล้วลองส่งรูปอีกครั้งด้านล่าง",
+                      )
+                    : tr(
+                        "This item needs organizer help and remains saved on this device.",
+                        "รายการนี้ต้องให้ผู้จัดช่วยเหลือ และยังบันทึกอยู่ในอุปกรณ์",
+                      ),
                 );
               continue;
             }
