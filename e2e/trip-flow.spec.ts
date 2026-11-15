@@ -3274,6 +3274,14 @@ test("captures dark trip tabs and light preview without horizontal overflow", as
       documentWidth,
       `${theme} ${tab} should not scroll horizontally`,
     ).toBeLessThanOrEqual(viewportWidth);
+    if (tab === "overview") {
+      await page.locator("header").screenshot({
+        path: `artifacts/${testInfo.project.name}-brand-${theme}-header.png`,
+      });
+      await page.screenshot({
+        path: `artifacts/${testInfo.project.name}-brand-${theme}-viewport.png`,
+      });
+    }
     await activity.screenshot({
       path: `artifacts/${testInfo.project.name}-${theme}-${tab}-fixture-preview.png`,
       style: "header, .activity-tabs { position: static !important; }",

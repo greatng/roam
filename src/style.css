@@ -1648,3 +1648,6 @@ button.itinerary-fab {
   padding: 0;
   margin: 0.75rem 0;
 }
+
+/* Compact, font-independent #R brand mark. */
+.roam-logo { display: block; width: 64px; height: 44px; }

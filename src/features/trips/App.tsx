@@ -1,3 +1,4 @@
+import { RoamLogo } from "../../shared/RoamLogo";
 import { Button } from "../../shared/ui/Button";
 import { ThemeChoice } from "../../shared/ui/ThemeChoice";
 import { revealEditor } from "../../shared/editor-navigation";
@@ -226,8 +227,8 @@ export function App() {
   return (
     <>
       <header>
-        <a href="#/trips" onClick={() => selectTrip(null)}>
-          Roam
+        <a href="#/trips" aria-label="Roam" onClick={() => selectTrip(null)}>
+          <RoamLogo />
         </a>
         <Button
           type="button"

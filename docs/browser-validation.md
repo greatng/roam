@@ -178,3 +178,7 @@ Direct camera capture is removed following the physical-device report. Eight foc
 ## US45 refresh navigation
 
 Six focused desktop/mobile browser cases pass for selected-tab refresh with an existing draft, file-picker/draft recovery and Senior view. A new regression failed before the fix. Draft restoration no longer forces Expenses; per-user/trip session navigation determines the tab. Lint/build pass.
+
+## US46 brand preview
+
+Four focused desktop/mobile cases pass for keyboard navigation and light/dark trip layouts. Reviewed `artifacts/mobile-chromium-brand-light-header.png` and `artifacts/mobile-chromium-brand-dark-header.png`; matching full viewport previews use the `brand-*-viewport.png` suffix. Lint/build pass. Header retains the accessible Roam home link.

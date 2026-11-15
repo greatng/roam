@@ -279,3 +279,7 @@ Issue #44 was opened before implementation. See [disable-receipt-camera.md](stor
 ## US45 — retain selected tab on refresh
 
 Issue #45 was opened before implementation. See [trip-tab-refresh.md](stories/trip-tab-refresh.md). Draft restoration no longer chooses the navigation tab; this supersedes US43's automatic navigation behavior while preserving draft fields and photo recovery.
+
+## US46 — Roam #R monogram
+
+Issue #46 was opened before implementation. See [roam-monogram.md](stories/roam-monogram.md) for design, acceptance criteria and evidence. Header, favicon and installation icons share font-independent geometric artwork; Roam remains the accessible app name.
