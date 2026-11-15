@@ -166,3 +166,7 @@ The complete local suite passed 83 E2E cases (one intentional desktop skip) and 
 ## US41–US42 receipt follow-up
 
 Full suite: 85 passed, one intentional skip. Both new-expense and saved-expense forms exercise native filechooser events for Choose file and Take photo on desktop/mobile, then process a PNG through the shared compressor. Financial-save/photo-retry and reload regressions remain green. Updated review image: `artifacts/mobile-chromium-new-expense-with-receipt.png`. Physical camera hardware is not exercised by browser emulation.
+
+## US43 camera interruption recovery
+
+The regression fills an expense, opens the camera chooser, reloads, verifies restored fields, supplies a photo, reloads again, verifies the photo, saves once, and confirms the saved draft does not reappear. It failed before implementation and passes on desktop/mobile. All 44 focused expense/receipt/offline/sign-out browser cases pass, as do 13 focused unit cases, lint and build. This simulates reload interruption; it does not exercise physical camera hardware or prove the reason a particular phone restarted the app.

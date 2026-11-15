@@ -997,6 +997,79 @@ test("creates an expense with a private receipt in one flow", async ({
   expect(fixture.getUploadedReceipt()).toBeDefined();
 });
 
+test("restores an unsaved expense after camera interruption and reload", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page);
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  let form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  await form.getByLabel("What was it for?").fill("Camera draft dinner");
+  await form.getByLabel("Amount (THB)").fill("420");
+  await form.getByLabel("Date (optional)").fill("2026-11-03");
+  await form.getByLabel("Time (optional, requires date)").fill("19:30");
+  const chooser = page.waitForEvent("filechooser");
+  await form.getByRole("button", { name: "Take photo", exact: true }).click();
+  await chooser;
+  await page.reload();
+  form = page.locator(".expense-entry");
+  await expect(form.getByLabel("What was it for?")).toHaveValue(
+    "Camera draft dinner",
+  );
+  await expect(form.getByLabel("Amount (THB)")).toHaveValue("420");
+  await expect(form.getByLabel("Date (optional)")).toHaveValue("2026-11-03");
+  await expect(form.getByLabel("Time (optional, requires date)")).toHaveValue(
+    "19:30",
+  );
+  expect(fixture.getExpenseOperationIds()).toHaveLength(0);
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    canvas.getContext("2d")!.fillRect(0, 0, 640, 480);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await form.getByLabel("Receipt camera", { exact: true }).setInputFiles({
+    name: "camera.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+  await expect(
+    form.getByRole("button", { name: "Save expense", exact: true }),
+  ).toBeEnabled();
+  await page.reload();
+  form = page.locator(".expense-entry");
+  await expect(form.getByLabel("What was it for?")).toHaveValue(
+    "Camera draft dinner",
+  );
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+  await form.getByRole("button", { name: "Save expense", exact: true }).click();
+  await expect.poll(() => fixture.getExpenseOperationIds().length).toBe(1);
+  await expect
+    .poll(() => fixture.getReceipts())
+    .toMatchObject([{ status: "ready" }]);
+  await page.reload();
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  await page.locator(".expense-entry > summary").click();
+  await expect(
+    page.locator(".expense-entry").getByLabel("What was it for?"),
+  ).toHaveValue("");
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+});
+
 test("receipt source buttons open file and camera choosers in both expense flows", async ({
   page,
 }) => {

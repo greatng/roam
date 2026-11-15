@@ -7,6 +7,7 @@ export type CachedTripData = {
     | "itinerary"
     | "members"
     | "expenses"
+    | "expense_draft"
     | "emergency"
     | "trips"
     | "checkins"

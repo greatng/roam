@@ -1,3 +1,4 @@
+import { Blob as NodeBlob } from "node:buffer";
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -90,6 +91,43 @@ describe("offline cache and outbox", () => {
     expect((await pendingOperations("user-a", "trip-1"))[0].state).toBe(
       "pending",
     );
+  });
+
+  it("isolates receipt drafts by user and trip and clears them with private cache cleanup", async () => {
+    const payload = {
+      fields: { description: "Camera draft", amount: "420" },
+      photo: {
+        blob: new NodeBlob(["jpeg"], { type: "image/jpeg" }),
+        width: 10,
+        height: 10,
+      },
+    };
+    await cacheTripData("user-a", "trip-1", "expense_draft", payload);
+    await cacheTripData("user-b", "trip-1", "expense_draft", {
+      fields: { description: "Other user" },
+    });
+    await cacheTripData("user-a", "trip-2", "expense_draft", {
+      fields: { description: "Other trip" },
+    });
+    const restored = await readCachedTripData<typeof payload>(
+      "user-a",
+      "trip-1",
+      "expense_draft",
+    );
+    expect(restored?.fields.description).toBe("Camera draft");
+    expect(await restored?.photo.blob.text()).toBe("jpeg");
+    await clearTripData("trip-1", "user-a");
+    expect(
+      await readCachedTripData("user-a", "trip-1", "expense_draft"),
+    ).toBeUndefined();
+    expect(
+      await readCachedTripData("user-b", "trip-1", "expense_draft"),
+    ).toBeDefined();
+    expect(
+      await readCachedTripData("user-a", "trip-2", "expense_draft"),
+    ).toBeDefined();
+    await clearAllLocalData();
+    expect(await localDb.cached.count()).toBe(0);
   });
 
   it("removes only the removed trip's data for that identity", async () => {

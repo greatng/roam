@@ -267,3 +267,7 @@ Issues #39 and #40 were opened before implementation. The English stories and ac
 ## US41–US42 — receipt upload authorization and camera choices
 
 Issues #41 and #42 were opened before implementation. See [receipt-upload-and-camera.md](stories/receipt-upload-and-camera.md) for the English stories, numbered criteria and diagnosis.
+
+## US43 — recover expense drafts after camera interruption
+
+Issue #43 was opened before implementation. See [expense-camera-recovery.md](stories/expense-camera-recovery.md) for the story, acceptance criteria and reproducible reload failure.

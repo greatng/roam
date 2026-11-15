@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { Button } from "../../../shared/ui/Button";
 import {
   compressReceipt,
@@ -9,7 +9,8 @@ import { ReceiptSourcePicker } from "./ReceiptSourcePicker";
 
 export type ReceiptDraftPickerProps = {
   photo: CompressedReceipt | null;
-  onChange: (photo: CompressedReceipt | null) => void;
+  onChange: (photo: CompressedReceipt | null) => void | Promise<unknown>;
+  beforePick?: () => Promise<unknown>;
   onBusyChange: (busy: boolean) => void;
   thai: boolean;
   disabled?: boolean;
@@ -34,9 +35,17 @@ export function ReceiptDraftPicker({
   photo,
   onChange,
   onBusyChange,
+  beforePick,
   thai,
   disabled = false,
 }: ReceiptDraftPickerProps) {
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -62,7 +71,8 @@ export function ReceiptDraftPicker({
     setError("");
     setProgress(tr(thai, "Compressing photo…", "กำลังบีบอัดรูปภาพ…"));
     try {
-      onChange(await compressReceipt(file));
+      const photo = await compressReceipt(file);
+      if (active.current) await onChange(photo);
     } catch (cause) {
       const reason =
         cause instanceof Error
@@ -90,6 +100,7 @@ export function ReceiptDraftPicker({
         thai={thai}
         disabled={disabled || busy}
         onChange={chooseFile}
+        beforePick={beforePick}
       />
       {photo && (
         <div class="receipt-draft-picker__preview">

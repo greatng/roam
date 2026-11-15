@@ -1,7 +1,7 @@
 import { Button } from "../../shared/ui/Button";
 import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
 import { ReceiptDraftPicker } from "../expenses/receipts/ReceiptDraftPicker";
-import type { CompressedReceipt } from "../expenses/receipts/compress";
+import { useExpenseDraft } from "../expenses/useExpenseDraft";
 import {
   uploadExpenseReceipt,
   removeExpenseReceiptFiles,
@@ -234,9 +234,8 @@ export function TripActivity({
   const tr = (en: string, th: string) => (thai ? th : en);
   const destinationTimezone = trip.timezone;
   const queryClient = useQueryClient();
-  const [expensePhoto, setExpensePhoto] = useState<CompressedReceipt | null>(
-    null,
-  );
+  const expenseDraft = useExpenseDraft(uid, trip.id);
+  const expensePhoto = expenseDraft.photo;
   const [compressingExpensePhoto, setCompressingExpensePhoto] = useState(false);
   const [savingExpense, setSavingExpense] = useState(false);
   const [expenseActionBusy, setExpenseActionBusy] = useState(false);
@@ -257,6 +256,12 @@ export function TripActivity({
   const [editing, setEditing] = useState<Item | null>(null);
   const [stayToEdit, setStayToEdit] = useState<StaySummary | null>(null);
   const expenseDateEdited = useRef(false);
+  useEffect(() => {
+    if (expenseDraft.restored) {
+      expenseDateEdited.current = true;
+      setTab("expenses");
+    }
+  }, [expenseDraft.restored]);
   const stopEditor = useRef<HTMLDetailsElement>(null);
   const [stopEditorOpen, setStopEditorOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -813,23 +818,33 @@ export function TripActivity({
         })),
         p_operation_id: op,
       };
-      await queueOperation({
-        id: op,
-        ownerId: uid,
-        tripId: trip.id,
-        kind: "expense",
-        payload,
-        ...(expensePhoto
-          ? {
-              receipt: {
-                id: id(),
-                blob: expensePhoto.blob,
-                width: expensePhoto.width,
-                height: expensePhoto.height,
-              },
-            }
-          : {}),
-      });
+      await expenseDraft.flush();
+      await localDb.transaction(
+        "rw",
+        localDb.outbox,
+        localDb.cached,
+        async () => {
+          await queueOperation({
+            id: op,
+            ownerId: uid,
+            tripId: trip.id,
+            kind: "expense",
+            payload,
+            ...(expensePhoto
+              ? {
+                  receipt: {
+                    id: id(),
+                    blob: expensePhoto.blob,
+                    width: expensePhoto.width,
+                    height: expensePhoto.height,
+                  },
+                }
+              : {}),
+          });
+          await localDb.cached.delete([uid, trip.id, "expense_draft"]);
+        },
+      );
+      await expenseDraft.clear();
       await refreshOutbox();
       setNotice(
         tr(
@@ -846,7 +861,7 @@ export function TripActivity({
       const todayDate = tripDateAt(new Date(), destinationTimezone);
       dateInput.defaultValue = todayDate;
       form.reset();
-      setExpensePhoto(null);
+
       dateInput.value = todayDate;
       timeInput.disabled = false;
       expenseDateEdited.current = false;
@@ -1661,6 +1676,7 @@ export function TripActivity({
         <>
           <details
             class="expense-entry"
+            open={expenseDraft.restored || undefined}
             onToggle={(event) => {
               if (event.currentTarget.open && !expenseDateEdited.current) {
                 const dateInput =
@@ -1688,7 +1704,18 @@ export function TripActivity({
                 "กรอกจำนวนเงินตามสกุลเงินของทริป เศษจากการหารจะแบ่งให้ผู้เดินทางคนแรกที่เลือก",
               )}
             </p>
-            <form class="editor-panel" tabIndex={-1} onSubmit={saveExpense}>
+            <form
+              ref={expenseDraft.form}
+              class="editor-panel"
+              tabIndex={-1}
+              onSubmit={saveExpense}
+              onInput={() => {
+                void expenseDraft.persist();
+              }}
+              onChange={() => {
+                void expenseDraft.persist();
+              }}
+            >
               <label>
                 {tr("What was it for?", "ค่าอะไร")}
                 <input name="description" required maxLength={240} />
@@ -1759,15 +1786,22 @@ export function TripActivity({
                   </label>
                 ))}
               </fieldset>
+              {expenseDraft.error && <p role="alert">{expenseDraft.error}</p>}
               <ReceiptDraftPicker
                 photo={expensePhoto}
-                onChange={setExpensePhoto}
+                onChange={expenseDraft.changePhoto}
+                beforePick={() => expenseDraft.persist()}
                 onBusyChange={setCompressingExpensePhoto}
                 thai={thai}
-                disabled={savingExpense || trip.status !== "active"}
+                disabled={
+                  !expenseDraft.ready ||
+                  savingExpense ||
+                  trip.status !== "active"
+                }
               />
               <Button
                 disabled={
+                  !expenseDraft.ready ||
                   savingExpense ||
                   compressingExpensePhoto ||
                   trip.status !== "active"

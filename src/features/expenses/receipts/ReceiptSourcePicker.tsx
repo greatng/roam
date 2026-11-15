@@ -6,6 +6,7 @@ export type ReceiptSourcePickerProps = {
   thai: boolean;
   disabled: boolean;
   onChange: (event: Event) => void;
+  beforePick?: () => Promise<unknown>;
 };
 
 const hiddenInputStyle = {
@@ -25,9 +26,14 @@ export function ReceiptSourcePicker({
   thai,
   disabled,
   onChange,
+  beforePick,
 }: ReceiptSourcePickerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
+  async function pick(input: HTMLInputElement | null) {
+    if (beforePick && (await beforePick()) === false) return;
+    input?.click();
+  }
   const chooseFile = thai ? "เลือกรูป" : "Choose file";
   const takePhoto = thai ? "ถ่ายรูป" : "Take photo";
 
@@ -59,7 +65,7 @@ export function ReceiptSourcePicker({
         size="medium"
         appearance="secondary"
         disabled={disabled}
-        onClick={() => fileInput.current?.click()}
+        onClick={() => void pick(fileInput.current)}
       >
         {chooseFile}
       </Button>
@@ -68,7 +74,7 @@ export function ReceiptSourcePicker({
         size="medium"
         appearance="secondary"
         disabled={disabled}
-        onClick={() => cameraInput.current?.click()}
+        onClick={() => void pick(cameraInput.current)}
       >
         {takePhoto}
       </Button>
