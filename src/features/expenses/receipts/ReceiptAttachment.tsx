@@ -405,7 +405,6 @@ export function ReceiptAttachment({
               aria-label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              capture="environment"
               onChange={chooseFile}
               disabled={busy}
             />
@@ -441,7 +440,6 @@ export function ReceiptAttachment({
               aria-label={tr(thai, "Choose a receipt photo", "เลือกรูปใบเสร็จ")}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              capture="environment"
               onChange={chooseFile}
               disabled={busy}
             />
