@@ -997,7 +997,7 @@ test("creates an expense with a private receipt in one flow", async ({
   expect(fixture.getUploadedReceipt()).toBeDefined();
 });
 
-test("restores an unsaved expense after camera interruption and reload", async ({
+test("restores an unsaved expense after file picker interruption and reload", async ({
   page,
 }) => {
   const fixture = await installFixture(page);
@@ -1009,17 +1009,17 @@ test("restores an unsaved expense after camera interruption and reload", async (
     .click();
   let form = page.locator(".expense-entry");
   await form.locator(":scope > summary").click();
-  await form.getByLabel("What was it for?").fill("Camera draft dinner");
+  await form.getByLabel("What was it for?").fill("Receipt draft dinner");
   await form.getByLabel("Amount (THB)").fill("420");
   await form.getByLabel("Date (optional)").fill("2026-11-03");
   await form.getByLabel("Time (optional, requires date)").fill("19:30");
   const chooser = page.waitForEvent("filechooser");
-  await form.getByRole("button", { name: "Take photo", exact: true }).click();
+  await form.getByRole("button", { name: "Choose file", exact: true }).click();
   await chooser;
   await page.reload();
   form = page.locator(".expense-entry");
   await expect(form.getByLabel("What was it for?")).toHaveValue(
-    "Camera draft dinner",
+    "Receipt draft dinner",
   );
   await expect(form.getByLabel("Amount (THB)")).toHaveValue("420");
   await expect(form.getByLabel("Date (optional)")).toHaveValue("2026-11-03");
@@ -1034,11 +1034,13 @@ test("restores an unsaved expense after camera interruption and reload", async (
     canvas.getContext("2d")!.fillRect(0, 0, 640, 480);
     return canvas.toDataURL("image/png").split(",")[1];
   });
-  await form.getByLabel("Receipt camera", { exact: true }).setInputFiles({
-    name: "camera.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(data, "base64"),
-  });
+  await form
+    .getByLabel("Receipt photo (optional)", { exact: true })
+    .setInputFiles({
+      name: "receipt.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(data, "base64"),
+    });
   await expect(
     form.getByRole("img", { name: "Compressed receipt preview" }),
   ).toBeVisible();
@@ -1048,7 +1050,7 @@ test("restores an unsaved expense after camera interruption and reload", async (
   await page.reload();
   form = page.locator(".expense-entry");
   await expect(form.getByLabel("What was it for?")).toHaveValue(
-    "Camera draft dinner",
+    "Receipt draft dinner",
   );
   await expect(
     form.getByRole("img", { name: "Compressed receipt preview" }),
@@ -1070,7 +1072,7 @@ test("restores an unsaved expense after camera interruption and reload", async (
   expect(fixture.getExpenseOperationIds()).toHaveLength(1);
 });
 
-test("receipt source buttons open file and camera choosers in both expense flows", async ({
+test("receipt file picker works without direct camera controls in both expense flows", async ({
   page,
 }) => {
   await installFixture(page);
@@ -1108,16 +1110,8 @@ test("receipt source buttons open file and camera choosers in both expense flows
     form.getByRole("img", { name: "Compressed receipt preview" }),
   ).toBeVisible();
 
-  const cameraChooserPromise = page.waitForEvent("filechooser");
-  await form.getByRole("button", { name: "Take photo" }).click();
-  const cameraChooser = await cameraChooserPromise;
-  expect(await (await cameraChooser.element()).getAttribute("capture")).toBe(
-    "environment",
-  );
-  await cameraChooser.setFiles(image);
-  await expect(
-    form.getByRole("img", { name: "Compressed receipt preview" }),
-  ).toBeVisible();
+  await expect(form.getByRole("button", { name: "Take photo" })).toHaveCount(0);
+  await expect(form.locator("input[capture]")).toHaveCount(0);
 
   const expense = page
     .locator("article.stop")
@@ -1134,16 +1128,10 @@ test("receipt source buttons open file and camera choosers in both expense flows
     expense.getByRole("img", { name: "Compressed receipt preview" }),
   ).toBeVisible();
 
-  const attachmentCameraPromise = page.waitForEvent("filechooser");
-  await expense.getByRole("button", { name: "Take photo" }).click();
-  const attachmentCamera = await attachmentCameraPromise;
-  expect(await (await attachmentCamera.element()).getAttribute("capture")).toBe(
-    "environment",
+  await expect(expense.getByRole("button", { name: "Take photo" })).toHaveCount(
+    0,
   );
-  await attachmentCamera.setFiles(image);
-  await expect(
-    expense.getByRole("img", { name: "Compressed receipt preview" }),
-  ).toBeVisible();
+  await expect(expense.locator("input[capture]")).toHaveCount(0);
 });
 
 test("after financial save, a receipt upload retry never creates the expense again", async ({
@@ -1409,7 +1397,7 @@ test("compresses a receipt before upload, displays it, and removes its private f
   });
   const input = expense.getByLabel("Choose a receipt photo");
   await input.setInputFiles({
-    name: "camera.png",
+    name: "receipt.png",
     mimeType: "image/png",
     buffer: Buffer.from(pngData, "base64"),
   });

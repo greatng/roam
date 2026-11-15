@@ -271,3 +271,7 @@ Issues #41 and #42 were opened before implementation. See [receipt-upload-and-ca
 ## US43 — recover expense drafts after camera interruption
 
 Issue #43 was opened before implementation. See [expense-camera-recovery.md](stories/expense-camera-recovery.md) for the story, acceptance criteria and reproducible reload failure.
+
+## US44 — disable direct receipt camera capture
+
+Issue #44 was opened before implementation. See [disable-receipt-camera.md](stories/disable-receipt-camera.md). This supersedes the direct camera controls in US42; file uploads and US43 draft recovery remain.

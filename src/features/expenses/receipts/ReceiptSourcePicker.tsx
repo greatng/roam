@@ -29,13 +29,11 @@ export function ReceiptSourcePicker({
   beforePick,
 }: ReceiptSourcePickerProps) {
   const fileInput = useRef<HTMLInputElement>(null);
-  const cameraInput = useRef<HTMLInputElement>(null);
   async function pick(input: HTMLInputElement | null) {
     if (beforePick && (await beforePick()) === false) return;
     input?.click();
   }
   const chooseFile = thai ? "เลือกรูป" : "Choose file";
-  const takePhoto = thai ? "ถ่ายรูป" : "Take photo";
 
   return (
     <div class="receipt-source-picker">
@@ -49,17 +47,6 @@ export function ReceiptSourcePicker({
         tabIndex={-1}
         style={hiddenInputStyle}
       />
-      <input
-        ref={cameraInput}
-        aria-label={thai ? "กล้องถ่ายรูปใบเสร็จ" : "Receipt camera"}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="environment"
-        onChange={onChange}
-        disabled={disabled}
-        tabIndex={-1}
-        style={hiddenInputStyle}
-      />
       <Button
         type="button"
         size="medium"
@@ -68,15 +55,6 @@ export function ReceiptSourcePicker({
         onClick={() => void pick(fileInput.current)}
       >
         {chooseFile}
-      </Button>
-      <Button
-        type="button"
-        size="medium"
-        appearance="secondary"
-        disabled={disabled}
-        onClick={() => void pick(cameraInput.current)}
-      >
-        {takePhoto}
       </Button>
     </div>
   );

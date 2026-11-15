@@ -35,7 +35,7 @@ Receipt files and metadata are cleaned after financial deletion. If cleanup fail
 
 Apply `20261115082235_receipt_storage_permission_probe.sql` after the earlier migrations. Storage authorization happens before final object size is available; do not add final-size checks to the INSERT policy. Keep the private bucket MIME/size limits and ready-finalization trigger.
 
-Both receipt forms offer **Choose file** and **Take photo**. Camera capture depends on native browser/device support and falls back to its picker. Both paths use the same compression.
+Both receipt forms offer **Choose file**. Direct **Take photo** capture is disabled (US44) following unsuccessful camera returns on a physical phone. Select an existing JPEG, PNG or WebP image; compression remains unchanged. The native system picker may offer additional sources independently.
 
 ### Camera interruption recovery (US43)
 
