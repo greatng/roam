@@ -113,3 +113,5 @@ Itinerary uses day-by-day timeline cards. Organizers open each record's three-do
 
 
 If a QR is generated but a different mobile cannot join, follow [invitation gateway deployment](docs/invitation-setup.md). The hosted `invite-gateway` must exist independently of database QR creation. The setup guide includes a no-Docker Dashboard path and a safe preflight check.
+
+Receipt photos are optional attachments on synced expenses, compressed on the device and kept in private Storage. See [receipt setup and limits](docs/receipt-setup.md) for the required migration, supported formats, retry behavior and deletion cleanup. New expenses default to today in the destination timezone; the date can still be changed or cleared.

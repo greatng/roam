@@ -249,3 +249,7 @@ Issue: https://github.com/greatng/wherewhere/issues/34
 As a traveler, I want uncluttered day headings without duplicate day numbers. AC1 removes the numbered circles while retaining Day N, the date and timeline line. AC2 reduces the empty gutter and preserves day boundaries, light/dark layouts and editing controls. AC3 verifies existing itinerary flows and refreshes phone previews. No backend or permission changes.
 
 US34 verification: desktop/mobile itinerary interaction checks and the light/dark mobile capture case pass (3 cases passed; the mobile-only capture is intentionally skipped on desktop). The refreshed viewport screenshots were inspected. Lint and production build pass. The date, Day N headings, timeline line and editing menus remain intact.
+
+## US35–US37 — accent day boundaries, expense dates and receipt photos
+
+Issues #35, #36 and #37 were opened before implementation. The English user stories, scope and numbered criteria are in [expense-receipts.md](stories/expense-receipts.md). Day headings gain accent boundaries; new expenses default to destination-local today; optional receipt photos attach to synced expenses with private access and on-device compression. Existing offline financial operations remain unchanged.

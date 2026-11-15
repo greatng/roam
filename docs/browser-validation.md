@@ -148,3 +148,11 @@ The phone fixture uses a long hotel name and address to check wrapping without h
 - [Dark Overview viewport](../artifacts/mobile-chromium-dark-overview-viewport-fixture-preview.png)
 
 Browser coverage checks a single formatted day heading outside the accommodation card, date navigation, grant/revoke controls, read-only participants and approved guest editors. Server/database tests separately prove authorization; mocked browser flows alone do not prove hosted permission enforcement. The permission migration is deployed, but no real trip's editing permissions were changed for testing.
+
+## US35–US37: accent dates, expense defaults and receipts
+
+All 63 desktop/mobile E2E cases pass; one desktop case is intentionally skipped because it captures only a mobile layout. All 80 unit/database tests pass, and lint/build pass. The expense-date case crosses the UTC/Bangkok day boundary and tests clearing and reset. Receipt cases inspect actual uploaded JPEG bytes, bounded dimensions/size, authenticated downloads, pending upload retry without duplicate metadata, offline preview and cleanup before trip deletion. Supabase API replies are intercepted; separate database tests exercise authorization and lifecycle guards. Hosted schema/bucket checks are read-only, with no real expense or receipt uploaded.
+
+- [Light accent day boundaries](../artifacts/mobile-chromium-light-itinerary-viewport-fixture-preview.png)
+- [Dark accent day boundaries](../artifacts/mobile-chromium-dark-itinerary-viewport-fixture-preview.png)
+- [Mobile receipt layout with a synthetic compression-test image](../artifacts/mobile-chromium-receipt-fixture-preview.png)

@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/Button";
+import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
 import { OverflowMenu } from "../../shared/ui/OverflowMenu";
 import { ActionIcon } from "../../shared/ActionIcon";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -238,6 +239,7 @@ export function TripActivity({
   );
   const [editing, setEditing] = useState<Item | null>(null);
   const [stayToEdit, setStayToEdit] = useState<StaySummary | null>(null);
+  const expenseDateEdited = useRef(false);
   const stopEditor = useRef<HTMLDetailsElement>(null);
   const [stopEditorOpen, setStopEditorOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -755,7 +757,18 @@ export function TripActivity({
           "บันทึกแล้ว กำลังรอการยืนยันจากเซิร์ฟเวอร์",
         ),
       );
+      const dateInput = form.elements.namedItem(
+        "expenseDate",
+      ) as HTMLInputElement;
+      const timeInput = form.elements.namedItem(
+        "expenseTime",
+      ) as HTMLInputElement;
+      const todayDate = tripDateAt(new Date(), destinationTimezone);
+      dateInput.defaultValue = todayDate;
       form.reset();
+      dateInput.value = todayDate;
+      timeInput.disabled = false;
+      expenseDateEdited.current = false;
       if (navigator.onLine) window.dispatchEvent(new Event("travelmate-sync"));
     } catch (e) {
       setNotice(errText(e));
@@ -1485,7 +1498,25 @@ export function TripActivity({
         </>
       ) : tab === "expenses" ? (
         <>
-          <details class="expense-entry" onToggle={revealOpenEditor}>
+          <details
+            class="expense-entry"
+            onToggle={(event) => {
+              if (event.currentTarget.open && !expenseDateEdited.current) {
+                const dateInput =
+                  event.currentTarget.querySelector<HTMLInputElement>(
+                    "input[name='expenseDate']",
+                  );
+                if (dateInput) {
+                  dateInput.defaultValue = tripDateAt(
+                    new Date(),
+                    destinationTimezone,
+                  );
+                  dateInput.value = dateInput.defaultValue;
+                }
+              }
+              revealOpenEditor(event);
+            }}
+          >
             <summary>
               {tr("Add shared expense", "เพิ่มค่าใช้จ่ายส่วนกลาง")}
             </summary>
@@ -1527,7 +1558,9 @@ export function TripActivity({
                 <input
                   name="expenseDate"
                   type="date"
+                  defaultValue={actualToday}
                   onInput={(event) => {
+                    expenseDateEdited.current = true;
                     const time = event.currentTarget.form?.elements.namedItem(
                       "expenseTime",
                     ) as HTMLInputElement | null;
@@ -1541,9 +1574,9 @@ export function TripActivity({
               <label>
                 {tr(
                   "Time (optional, requires date)",
-                  "เวลา (ไม่บังคับ ต้องเลือกวันที่ก่อน",
+                  "เวลา (ไม่บังคับ ต้องเลือกวันที่ก่อน)",
                 )}
-                <input name="expenseTime" type="time" disabled />
+                <input name="expenseTime" type="time" />
               </label>
               <label>
                 {tr("Paid by", "ผู้จ่าย")}
@@ -1567,6 +1600,12 @@ export function TripActivity({
                 ))}
               </fieldset>
               <Button>{tr("Save expense", "บันทึกค่าใช้จ่าย")}</Button>
+              <p class="receipt-help">
+                {tr(
+                  "After this expense syncs, you can attach a receipt photo below. Photo uploads need a connection.",
+                  "เมื่อซิงก์ค่าใช้จ่ายแล้ว สามารถแนบรูปใบเสร็จด้านล่างได้ การอัปโหลดรูปต้องเชื่อมต่ออินเทอร์เน็ต",
+                )}
+              </p>
             </form>
           </details>
           <h3>{tr("Balances", "ยอดคงเหลือ")}</h3>
@@ -1664,7 +1703,7 @@ export function TripActivity({
           )}
           {expenses.length ? (
             expenses.map((e) => (
-              <article class="stop">
+              <article class="stop" key={e.id}>
                 <strong>{e.description}</strong>
                 <p>
                   {
@@ -1752,6 +1791,14 @@ export function TripActivity({
                       })}
                   </details>
                 ) : null}
+                <ReceiptAttachment
+                  expenseId={e.id}
+                  tripId={trip.id}
+                  uid={uid}
+                  organizer={organizer}
+                  thai={thai}
+                  active={trip.status === "active"}
+                />
                 {organizer && !senior && (
                   <details onToggle={revealOpenEditor}>
                     <summary>

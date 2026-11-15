@@ -2,11 +2,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import { readdirSync, readFileSync } from "node:fs";
 import { test, expect } from "vitest";
+import { storageBootstrap } from "./helpers/storage-bootstrap";
 
 test("approved signed-in plan editors can write planning data without gaining administration", async () => {
   const db = new PGlite();
   try {
     await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key, is_anonymous boolean default false, email text, email_confirmed_at timestamptz); create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
+    await db.exec(storageBootstrap);
     for (const file of readdirSync("supabase/migrations").filter((name) => name.endsWith(".sql")).sort())
       await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
 

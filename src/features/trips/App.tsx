@@ -9,6 +9,7 @@ import { canCreateTrip } from "../auth/email";
 import { useMembers } from "../members/queries";
 import { pages } from "../../shared/supabase/pages";
 import { redeem } from "../invites/redeem";
+import { removeTripReceiptFiles } from "../expenses/receipts/storage";
 
 import { useEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
@@ -863,8 +864,8 @@ export function App() {
                               <summary>{t("Delete trip", "ลบทริป")}</summary>
                               <p>
                                 {t(
-                                  "This permanently removes the trip, its itinerary, expenses, members, and stay details. Type the trip title to confirm.",
-                                  "การดำเนินการนี้จะลบทริป กำหนดการ ค่าใช้จ่าย สมาชิก และข้อมูลที่พักถาวร กรุณาพิมพ์ชื่อทริปเพื่อยืนยัน",
+                                  "This permanently removes the trip, its itinerary, expenses, receipt photos, members, and stay details. Type the trip title to confirm.",
+                                  "การดำเนินการนี้จะลบทริป กำหนดการ ค่าใช้จ่าย รูปใบเสร็จ สมาชิก และข้อมูลที่พักถาวร กรุณาพิมพ์ชื่อทริปเพื่อยืนยัน",
                                 )}
                               </p>
                               <form
@@ -881,6 +882,7 @@ export function App() {
                                     return;
                                   }
                                   void run(async () => {
+                                    await removeTripReceiptFiles(trip.id);
                                     await rpc("delete_trip", {
                                       p_trip_id: trip.id,
                                       p_confirmation_title:

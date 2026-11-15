@@ -1601,3 +1601,42 @@ button.itinerary-fab {
   .plan > .plan-nights.itinerary-timeline { padding-left: 0.85rem; }
   .plan-organizer-actions { right: max(1.25rem, env(safe-area-inset-right)); }
 }
+
+/* Accent the existing day/date heading as the boundary between itinerary days. */
+.plan-night .plan-day-heading.plan-day-summary {
+  gap: 0.3rem 0.55rem;
+  padding: 0.45rem 0.6rem;
+  margin: 0 0 0.55rem;
+  border-left: 3px solid var(--terra);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0 8px 8px 0;
+  background: var(--surface-soft, #f1eee5);
+  color: var(--ink);
+}
+.plan-night .plan-day-heading .plan-day-number {
+  color: #93462f;
+  font-weight: 700;
+}
+.plan-night .plan-day-heading time {
+  color: #93462f;
+  font-weight: 700;
+}
+:root[data-theme="dark"] .plan-night .plan-day-heading .plan-day-number,
+:root[data-theme="dark"] .plan-night .plan-day-heading time {
+  color: #e3a28b;
+}
+@media (max-width: 560px) {
+  .plan-night .plan-day-heading.plan-day-summary {
+    gap: 0.25rem 0.45rem;
+    padding: 0.4rem 0.5rem;
+    margin-bottom: 0.45rem;
+  }
+}
+/* Receipt photo controls stay compact inside expense details. */
+.receipt-attachment { margin-block: .5rem; font-size: .9rem; }
+.receipt-attachment > summary { cursor: pointer; font-weight: 600; }
+.receipt-attachment__body { display: grid; gap: .5rem; padding: .65rem 0; }
+.receipt-attachment__body label { display: grid; gap: .35rem; }
+.receipt-attachment__body input[type="file"] { max-width: 100%; font: inherit; }
+.receipt-attachment__body button { justify-self: start; }
+.receipt-attachment__photo { display: block; max-width: min(100%, 24rem); max-height: 24rem; object-fit: contain; border-radius: .5rem; }
