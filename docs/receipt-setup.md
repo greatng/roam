@@ -39,6 +39,6 @@ Both receipt forms offer **Choose file**. Direct **Take photo** capture is disab
 
 ### Camera interruption recovery (US43)
 
-New-expense fields are stored locally under the signed-in user and trip as they change. The picker waits for a draft write before opening; compressed photos are stored when the browser delivers them. Reloading restores the Expenses tab and opens the draft. Saving atomically moves the expense/photo into the existing outbox and removes the draft. Signing out or clearing trip data removes the local draft through the existing private-cache cleanup.
+New-expense fields are stored locally under the signed-in user and trip as they change. The picker waits for a draft write before opening; compressed photos are stored when the browser delivers them. Reloading retains the selected trip tab for this browser session (US45). Opening Expenses restores and opens the saved draft. Saving atomically moves the expense/photo into the existing outbox and removes the draft. Signing out or clearing trip data removes the local draft through the existing private-cache cleanup.
 
 If the operating system terminates the camera/browser before returning its file, the app cannot recover that undelivered image. Reopen the draft and choose the photo again. A recovered draft is not submitted until Save expense is pressed. Local-storage errors display a warning; keep the page open if preservation fails.

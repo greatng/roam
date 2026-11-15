@@ -275,3 +275,7 @@ Issue #43 was opened before implementation. See [expense-camera-recovery.md](sto
 ## US44 — disable direct receipt camera capture
 
 Issue #44 was opened before implementation. See [disable-receipt-camera.md](stories/disable-receipt-camera.md). This supersedes the direct camera controls in US42; file uploads and US43 draft recovery remain.
+
+## US45 — retain selected tab on refresh
+
+Issue #45 was opened before implementation. See [trip-tab-refresh.md](stories/trip-tab-refresh.md). Draft restoration no longer chooses the navigation tab; this supersedes US43's automatic navigation behavior while preserving draft fields and photo recovery.

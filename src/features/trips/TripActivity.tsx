@@ -246,9 +246,30 @@ export function TripActivity({
   const me = approved.find((m) => m.user_id === uid);
   const organizer = me?.role === "organizer";
   const canEditPlan = organizer || me?.can_edit_plan === true;
-  const [tab, setTab] = useState<"today" | "plan" | "expenses" | "trip">(
-    "today",
-  );
+  type TripTab = "today" | "plan" | "expenses" | "trip";
+  const tabKey = `roam-trip-tab:${uid}:${trip.id}`;
+  function readTab(): TripTab {
+    try {
+      const value = sessionStorage.getItem(tabKey);
+      return value === "plan" || value === "expenses" || value === "trip"
+        ? value
+        : "today";
+    } catch {
+      return "today";
+    }
+  }
+  const [tab, setTabState] = useState<TripTab>(readTab);
+  useEffect(() => {
+    setTabState(readTab());
+  }, [tabKey]);
+  function setTab(value: TripTab) {
+    setTabState(value);
+    try {
+      sessionStorage.setItem(tabKey, value);
+    } catch {
+      // Navigation remains usable when browser session storage is unavailable.
+    }
+  }
   const seniorKey = `travelmate-senior:${uid}`;
   const [senior, setSenior] = useState(
     () => localStorage.getItem(seniorKey) === "true",
@@ -259,7 +280,6 @@ export function TripActivity({
   useEffect(() => {
     if (expenseDraft.restored) {
       expenseDateEdited.current = true;
-      setTab("expenses");
     }
   }, [expenseDraft.restored]);
   const stopEditor = useRef<HTMLDetailsElement>(null);

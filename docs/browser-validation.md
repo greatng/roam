@@ -174,3 +174,7 @@ The regression fills an expense, opens the camera chooser, reloads, verifies res
 ## US44 file-only receipt uploads
 
 Direct camera capture is removed following the physical-device report. Eight focused desktop/mobile cases pass: file-only controls in both forms, no capture input, image compression, private upload/view/removal, and draft recovery. Lint/build pass. Updated receipt screenshots reflect Choose file only. Earlier camera tests are historical evidence of native picker configuration, not proof that a physical device returns a photo.
+
+## US45 refresh navigation
+
+Six focused desktop/mobile browser cases pass for selected-tab refresh with an existing draft, file-picker/draft recovery and Senior view. A new regression failed before the fix. Draft restoration no longer forces Expenses; per-user/trip session navigation determines the tab. Lint/build pass.

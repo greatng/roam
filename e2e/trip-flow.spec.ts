@@ -997,6 +997,39 @@ test("creates an expense with a private receipt in one flow", async ({
   expect(fixture.getUploadedReceipt()).toBeDefined();
 });
 
+test("refresh keeps the chosen tab even when an expense draft exists", async ({
+  page,
+}) => {
+  await installFixture(page);
+  await page.goto("/");
+  await openTrip(page);
+  const nav = () => page.getByRole("navigation", { name: "Trip sections" });
+  await expect(
+    nav().getByRole("button", { name: "Overview", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await nav().getByRole("button", { name: "Expenses", exact: true }).click();
+  const form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  await form.getByLabel("What was it for?").fill("Keep this draft");
+  await form.getByLabel("Amount (THB)").fill("320");
+  // Opening the file picker waits until the draft is durable.
+  const chooser = page.waitForEvent("filechooser");
+  await form.getByRole("button", { name: "Choose file", exact: true }).click();
+  await chooser;
+  for (const tab of ["Itinerary", "Trip", "Overview"]) {
+    await nav().getByRole("button", { name: tab, exact: true }).click();
+    await page.reload();
+    await expect(
+      nav().getByRole("button", { name: tab, exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+  }
+  await nav().getByRole("button", { name: "Expenses", exact: true }).click();
+  await expect(form.getByLabel("What was it for?")).toHaveValue(
+    "Keep this draft",
+  );
+  await expect(form.getByLabel("Amount (THB)")).toHaveValue("320");
+});
+
 test("restores an unsaved expense after file picker interruption and reload", async ({
   page,
 }) => {
