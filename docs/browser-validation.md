@@ -156,3 +156,9 @@ All 63 desktop/mobile E2E cases pass; one desktop case is intentionally skipped 
 - [Light accent day boundaries](../artifacts/mobile-chromium-light-itinerary-viewport-fixture-preview.png)
 - [Dark accent day boundaries](../artifacts/mobile-chromium-dark-itinerary-viewport-fixture-preview.png)
 - [Mobile receipt layout with a synthetic compression-test image](../artifacts/mobile-chromium-receipt-fixture-preview.png)
+
+## US39–US40: receipts during creation and expense removal
+
+The complete local suite passed 83 E2E cases (one intentional desktop skip) and 86 unit/database tests. New cases create an expense and receipt together, persist the compressed Blob and original operation ID across reload, and retry a receipt after a stored financial acknowledgement without reissuing create_expense. Deletion cases cover cancellation, native confirmation, organizer-only controls, financial deletion before receipt removal, and cleanup failure/retry without restoring the expense. Separate PGlite tests verify balances, settlement/history retention, version and membership checks, stale-operation rejection, and private deleted-receipt access. Fixtures use synthetic data; no real expense was deleted for testing.
+
+[Mobile new expense with receipt](../artifacts/mobile-chromium-new-expense-with-receipt.png)

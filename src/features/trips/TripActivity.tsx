@@ -1,10 +1,17 @@
 import { Button } from "../../shared/ui/Button";
 import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
+import { ReceiptDraftPicker } from "../expenses/receipts/ReceiptDraftPicker";
+import type { CompressedReceipt } from "../expenses/receipts/compress";
+import {
+  uploadExpenseReceipt,
+  removeExpenseReceiptFiles,
+  listExpenseReceiptCleanups,
+} from "../expenses/receipts/api";
 import { OverflowMenu } from "../../shared/ui/OverflowMenu";
 import { ActionIcon } from "../../shared/ActionIcon";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import { useQuery } from "@tanstack/preact-query";
+import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { supabase } from "../../shared/supabase/client";
 import {
   cacheTripData,
@@ -88,6 +95,8 @@ type Expense = {
   created_at: string;
   expense_date?: string | null;
   expense_time?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
   version?: number;
   shares?: { trip_member_id: string; owed_minor: number | string }[];
 };
@@ -224,6 +233,13 @@ export function TripActivity({
 }) {
   const tr = (en: string, th: string) => (thai ? th : en);
   const destinationTimezone = trip.timezone;
+  const queryClient = useQueryClient();
+  const [expensePhoto, setExpensePhoto] = useState<CompressedReceipt | null>(
+    null,
+  );
+  const [compressingExpensePhoto, setCompressingExpensePhoto] = useState(false);
+  const [savingExpense, setSavingExpense] = useState(false);
+  const [expenseActionBusy, setExpenseActionBusy] = useState(false);
   const approved = members.filter(
     (m) => m.trip_id === trip.id && m.status === "approved",
   );
@@ -304,6 +320,7 @@ export function TripActivity({
           "*,amount_minor::text,expense_shares(trip_member_id,owed_minor::text)",
         )
         .eq("trip_id", trip.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       if (error && mayUseOfflineCache(error)) {
         const local = await readCachedTripData<Expense[]>(
@@ -453,7 +470,14 @@ export function TripActivity({
     },
   });
   const items = itineraryQuery.data ?? [];
-  const expenses = expensesQuery.data ?? [];
+  const expenses = (expensesQuery.data ?? []).filter(
+    (expense) => !expense.deleted_at,
+  );
+  const receiptCleanupsQuery = useQuery({
+    queryKey: ["deleted-expense-receipts", uid, trip.id],
+    enabled: organizer,
+    queryFn: () => listExpenseReceiptCleanups(trip.id),
+  });
   const balances = useMemo(
     () =>
       serverBalancesQuery.data?.length
@@ -506,16 +530,48 @@ export function TripActivity({
             const { data: sessionData } = await supabase.auth.getSession();
             if (disposed || sessionData.session?.user.id !== uid) break;
             const { kind, payload } = op;
-            const result =
-              kind === "check_in"
-                ? await supabase.rpc("check_in", { ...payload })
-                : await supabase.rpc("create_expense", { ...payload });
-            if (result.error) throw result.error;
+            let expenseId = op.expenseId;
+            if (kind === "check_in" || !expenseId) {
+              const result =
+                kind === "check_in"
+                  ? await supabase.rpc("check_in", { ...payload })
+                  : await supabase.rpc("create_expense", { ...payload });
+              if (result.error) throw result.error;
+              if (kind === "expense" && op.receipt) {
+                const created = Array.isArray(result.data)
+                  ? result.data[0]
+                  : result.data;
+                if (!created?.id)
+                  throw new Error(
+                    "Expense confirmation was incomplete. Retry safely.",
+                  );
+                expenseId = created.id;
+                if (!(await localDb.outbox.update(op.id, { expenseId }))) break;
+                window.dispatchEvent(new Event("travelmate-data-updated"));
+              }
+            }
+            if (op.receipt && expenseId) {
+              if (disposed) break;
+              const currentSession = await supabase.auth.getSession();
+              if (currentSession.data.session?.user.id !== uid) break;
+              await uploadExpenseReceipt({
+                expenseId,
+                tripId: trip.id,
+                uid,
+                receiptId: op.receipt.id,
+                photo: op.receipt.blob,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: ["expense-receipt", trip.id, expenseId, uid],
+              });
+            }
             await localDb.outbox.delete(op.id);
             if (!disposed)
               setNotice(tr("Sent and confirmed.", "ส่งและยืนยันแล้ว"));
             window.dispatchEvent(new Event("travelmate-data-updated"));
           } catch (e) {
+            const confirmedExpense = (await localDb.outbox.get(op.id))
+              ?.expenseId;
             const code =
               typeof e === "object" && e !== null && "code" in e
                 ? String((e as { code: unknown }).code)
@@ -540,10 +596,15 @@ export function TripActivity({
             });
             if (!disposed)
               setNotice(
-                tr(
-                  "Could not send yet. Your item is saved and will retry when connected.",
-                  "ยังส่งไม่ได้ รายการถูกบันทึกและจะลองอีกครั้งเมื่อเชื่อมต่อ",
-                ),
+                confirmedExpense && op.receipt
+                  ? tr(
+                      "Expense saved; receipt pending. Retry the photo upload below.",
+                      "บันทึกค่าใช้จ่ายแล้ว แต่รูปใบเสร็จยังรอส่ง กดลองส่งรูปอีกครั้งด้านล่าง",
+                    )
+                  : tr(
+                      "Could not send yet. Your item is saved and will retry when connected.",
+                      "ยังส่งไม่ได้ รายการถูกบันทึกและจะลองอีกครั้งเมื่อเชื่อมต่อ",
+                    ),
               );
             break;
           }
@@ -570,6 +631,7 @@ export function TripActivity({
       void expensesQuery.refetch();
       void settlementsQuery.refetch();
       void serverBalancesQuery.refetch();
+      if (organizer) void receiptCleanupsQuery.refetch();
     };
     window.addEventListener("travelmate-data-updated", refresh);
     return () => window.removeEventListener("travelmate-data-updated", refresh);
@@ -705,6 +767,8 @@ export function TripActivity({
   async function saveExpense(e: Event) {
     e.preventDefault();
     setNotice("");
+    if (compressingExpensePhoto || savingExpense) return;
+    setSavingExpense(true);
     const form = e.currentTarget as HTMLFormElement;
     const f = new FormData(form);
     const selected = approved
@@ -750,6 +814,16 @@ export function TripActivity({
         tripId: trip.id,
         kind: "expense",
         payload,
+        ...(expensePhoto
+          ? {
+              receipt: {
+                id: id(),
+                blob: expensePhoto.blob,
+                width: expensePhoto.width,
+                height: expensePhoto.height,
+              },
+            }
+          : {}),
       });
       await refreshOutbox();
       setNotice(
@@ -767,12 +841,86 @@ export function TripActivity({
       const todayDate = tripDateAt(new Date(), destinationTimezone);
       dateInput.defaultValue = todayDate;
       form.reset();
+      setExpensePhoto(null);
       dateInput.value = todayDate;
       timeInput.disabled = false;
       expenseDateEdited.current = false;
       if (navigator.onLine) window.dispatchEvent(new Event("travelmate-sync"));
     } catch (e) {
       setNotice(errText(e));
+    } finally {
+      setSavingExpense(false);
+    }
+  }
+  async function deleteExpense(expense: Expense) {
+    if (!organizer || expenseActionBusy || trip.status !== "active") return;
+    if (!navigator.onLine) {
+      setNotice(
+        tr(
+          "Connect to delete an expense.",
+          "เชื่อมต่ออินเทอร์เน็ตเพื่อลบค่าใช้จ่าย",
+        ),
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        tr(
+          "Delete this expense? It will be removed from balances. Recorded payments stay unchanged.",
+          "ลบค่าใช้จ่ายนี้หรือไม่? จะนำออกจากการคำนวณยอดคงเหลือ แต่การชำระเงินจริงที่บันทึกไว้จะยังอยู่",
+        ),
+      )
+    )
+      return;
+    setExpenseActionBusy(true);
+    let deleted = false;
+    try {
+      const result = await supabase.rpc("delete_expense", {
+        p_trip_id: trip.id,
+        p_expense_id: expense.id,
+        p_expected_version: expense.version ?? 1,
+      });
+      if (result.error) throw result.error;
+      deleted = true;
+      window.dispatchEvent(new Event("travelmate-data-updated"));
+      await removeExpenseReceiptFiles(trip.id, expense.id);
+      await receiptCleanupsQuery.refetch();
+      setNotice(tr("Expense deleted.", "ลบค่าใช้จ่ายแล้ว"));
+    } catch (error) {
+      setNotice(
+        deleted
+          ? tr(
+              "Expense deleted. Receipt cleanup pending. Use Retry receipt cleanup below.",
+              "ลบค่าใช้จ่ายแล้ว แต่รูปใบเสร็จยังรอลบ กดลองลบรูปอีกครั้งด้านล่าง",
+            )
+          : (error as { code?: string } | null)?.code === "40001"
+            ? tr(
+                "This expense changed. Refresh before deleting.",
+                "ค่าใช้จ่ายนี้ถูกแก้ไขแล้ว โปรดรีเฟรชก่อนลบ",
+              )
+            : errText(error),
+      );
+      if (deleted) await receiptCleanupsQuery.refetch();
+    } finally {
+      setExpenseActionBusy(false);
+    }
+  }
+  async function retryExpenseReceiptCleanup(expenseId: string) {
+    if (!organizer || expenseActionBusy) return;
+    setExpenseActionBusy(true);
+    try {
+      await removeExpenseReceiptFiles(trip.id, expenseId);
+      await receiptCleanupsQuery.refetch();
+      setNotice(tr("Receipt cleanup completed.", "ลบรูปใบเสร็จเรียบร้อยแล้ว"));
+    } catch {
+      setNotice(
+        tr(
+          "Receipt cleanup pending. Check your connection and retry.",
+          "รูปใบเสร็จยังรอลบ โปรดตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง",
+        ),
+      );
+    } finally {
+      setExpenseActionBusy(false);
     }
   }
   async function correctExpense(e: Event, expense: Expense) {
@@ -922,7 +1070,12 @@ export function TripActivity({
               <strong>
                 {op.kind === "check_in"
                   ? tr("Previous check-in", "เช็กอินเดิม")
-                  : tr("Expense", "ค่าใช้จ่าย")}
+                  : op.expenseId && op.receipt
+                    ? tr(
+                        "Expense saved; receipt pending",
+                        "บันทึกค่าใช้จ่ายแล้ว รูปใบเสร็จรอส่ง",
+                      )
+                    : tr("Expense", "ค่าใช้จ่าย")}
               </strong>
               <span>
                 {tr(
@@ -952,7 +1105,9 @@ export function TripActivity({
                     window.dispatchEvent(new Event("travelmate-sync"));
                   }}
                 >
-                  {tr("Retry", "ลองอีกครั้ง")}
+                  {op.expenseId && op.receipt
+                    ? tr("Retry receipt upload", "ลองส่งรูปใบเสร็จอีกครั้ง")
+                    : tr("Retry", "ลองอีกครั้ง")}
                 </Button>
               )}
               {op.state !== "sending" && (
@@ -1599,13 +1754,22 @@ export function TripActivity({
                   </label>
                 ))}
               </fieldset>
-              <Button>{tr("Save expense", "บันทึกค่าใช้จ่าย")}</Button>
-              <p class="receipt-help">
-                {tr(
-                  "After this expense syncs, you can attach a receipt photo below. Photo uploads need a connection.",
-                  "เมื่อซิงก์ค่าใช้จ่ายแล้ว สามารถแนบรูปใบเสร็จด้านล่างได้ การอัปโหลดรูปต้องเชื่อมต่ออินเทอร์เน็ต",
-                )}
-              </p>
+              <ReceiptDraftPicker
+                photo={expensePhoto}
+                onChange={setExpensePhoto}
+                onBusyChange={setCompressingExpensePhoto}
+                thai={thai}
+                disabled={savingExpense || trip.status !== "active"}
+              />
+              <Button
+                disabled={
+                  savingExpense ||
+                  compressingExpensePhoto ||
+                  trip.status !== "active"
+                }
+              >
+                {tr("Save expense", "บันทึกค่าใช้จ่าย")}
+              </Button>
             </form>
           </details>
           <h3>{tr("Balances", "ยอดคงเหลือ")}</h3>
@@ -1693,6 +1857,32 @@ export function TripActivity({
               </p>
             ))}
           <h3>{tr("Recent expenses", "ค่าใช้จ่ายล่าสุด")}</h3>
+          {organizer && receiptCleanupsQuery.isError && (
+            <p role="alert">
+              {tr(
+                "Could not check receipt cleanup. Refresh when connected.",
+                "ตรวจสอบรูปใบเสร็จที่รอลบไม่ได้ โปรดรีเฟรชเมื่อเชื่อมต่อ",
+              )}
+            </p>
+          )}
+          {organizer &&
+            receiptCleanupsQuery.data?.map((cleanup) => (
+              <div class="pending" key={cleanup.id}>
+                <p>
+                  {tr("Receipt cleanup pending", "รูปใบเสร็จรอลบ")}:{" "}
+                  {cleanup.description}
+                </p>
+                <Button
+                  type="button"
+                  disabled={expenseActionBusy || !navigator.onLine}
+                  onClick={() =>
+                    void retryExpenseReceiptCleanup(cleanup.expense_id)
+                  }
+                >
+                  {tr("Retry receipt cleanup", "ลองลบรูปใบเสร็จอีกครั้ง")}
+                </Button>
+              </div>
+            ))}
           {expenseRevisionsQuery.isError && (
             <p role="status">
               {tr(
@@ -1791,6 +1981,20 @@ export function TripActivity({
                       })}
                   </details>
                 ) : null}
+                {organizer && !senior && trip.status === "active" && (
+                  <Button
+                    type="button"
+                    svgOnly
+                    appearance="tertiary"
+                    class="danger"
+                    aria-label={tr("Delete expense", "ลบค่าใช้จ่าย")}
+                    title={tr("Delete expense", "ลบค่าใช้จ่าย")}
+                    disabled={expenseActionBusy}
+                    onClick={() => void deleteExpense(e)}
+                  >
+                    <ActionIcon kind="remove" />
+                  </Button>
+                )}
                 <ReceiptAttachment
                   expenseId={e.id}
                   tripId={trip.id}

@@ -69,6 +69,7 @@ async function installFixture(
     longHotel?: boolean;
     failReceiptUploadOnce?: boolean;
     seedReceipt?: boolean;
+    failReceiptCleanup?: boolean;
     invites?: Record<string, unknown>[];
   } = {},
 ) {
@@ -266,6 +267,7 @@ async function installFixture(
     : [];
   let uploadedReceipt: Buffer | undefined;
   let failReceiptUploadOnce = !!options.failReceiptUploadOnce;
+  let failReceiptCleanup = !!options.failReceiptCleanup;
   let receiptInsertCount = 0;
   const receiptStorageEvents: string[] = [];
   const receiptDownloads: { path: string; authorization: string }[] = [];
@@ -315,7 +317,11 @@ async function installFixture(
     if (table === "itinerary_items") data = itinerary;
     if (table === "nightly_destinations") data = nights;
     if (table === "stays") data = stays;
-    if (table === "expenses") data = expenses;
+    if (table === "expenses") {
+      data = expenses;
+      if (url.searchParams.get("deleted_at") === "is.null")
+        data = expenses.filter((expense) => expense.deleted_at == null);
+    }
     if (table === "expense_receipts") data = receipts;
     if (table === "emergency_cards") data = emergencyCards;
     if (table === "expense_receipts") {
@@ -352,8 +358,26 @@ async function installFixture(
         data = receipts.filter(
           (receipt) =>
             (!expenseId || receipt.expense_id === expenseId) &&
-            receipt.trip_id === requestedTrip,
+            (!requestedTrip || receipt.trip_id === requestedTrip),
         );
+        if (
+          params.has("select") &&
+          (params.get("select") ?? "").includes("expenses!inner")
+        ) {
+          data = data
+            .filter((receipt) => {
+              const linked = expenses.find(
+                (expense) => expense.id === receipt.expense_id,
+              );
+              return !!linked && linked.deleted_at != null;
+            })
+            .map((receipt) => ({
+              ...receipt,
+              expenses: expenses.find(
+                (expense) => expense.id === receipt.expense_id,
+              ),
+            }));
+        }
       }
     }
     const from = Number(route.request().headers()["range"]?.split("-")[0] ?? 0);
@@ -435,6 +459,15 @@ async function installFixture(
     ) {
       const body = route.request().postDataJSON() as { prefixes?: string[] };
       receiptStorageEvents.push(`remove:${body.prefixes?.join(",") ?? ""}`);
+      if (failReceiptCleanup) {
+        failReceiptCleanup = false;
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "temporary cleanup failure" }),
+        });
+        return;
+      }
       if (
         body.prefixes?.some((prefix) =>
           receipts.some((receipt) => receipt.object_path === prefix),
@@ -581,6 +614,16 @@ async function installFixture(
       );
       result =
         expenses.find((expense) => expense.id === args.p_expense_id) ?? null;
+    } else if (fn === "delete_expense") {
+      lifecycleEvents.push("delete_expense");
+      const target = expenses.find(
+        (expense) => expense.id === args.p_expense_id,
+      );
+      if (target) {
+        target.deleted_at = new Date().toISOString();
+        target.deleted_by = fixtureUid;
+      }
+      result = target ?? null;
     } else if (fn === "archive_trip" || fn === "restore_trip") {
       trip.status = fn === "archive_trip" ? "archived" : "active";
     } else if (fn === "set_trip_timezone") {
@@ -641,6 +684,9 @@ async function installFixture(
     getReceipts: () => receipts,
     getUploadedReceipt: () => uploadedReceipt,
     getReceiptInsertCount: () => receiptInsertCount,
+    failNextReceiptUpload: () => {
+      failReceiptUploadOnce = true;
+    },
     getReceiptStorageEvents: () => receiptStorageEvents,
     getReceiptDownloads: () => receiptDownloads,
     getLifecycleEvents: () => lifecycleEvents,
@@ -887,6 +933,301 @@ test("keeps a pending receipt retryable without duplicating metadata, and preser
     { status: "ready", expense_id: "expense-1" },
   ]);
 });
+
+test("creates an expense with a private receipt in one flow", async ({
+  page,
+}, testInfo) => {
+  const fixture = await installFixture(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  await expect(form.getByLabel("Amount (THB)")).toHaveValue("");
+  await expect(form.getByLabel("Date (optional)")).toHaveValue("2026-11-02");
+  await form.getByLabel("What was it for?").fill("Market lunch");
+  await form.getByLabel("Amount (THB)").fill("240");
+  const data = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#cf772a";
+    context.fillRect(0, 0, 640, 480);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await form.getByLabel("Receipt photo (optional)").setInputFiles({
+    name: "receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+  await form.getByRole("button", { name: "Remove selected receipt" }).click();
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toHaveCount(0);
+  await form.getByLabel("Receipt photo (optional)").setInputFiles({
+    name: "receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
+  await expect(
+    form.getByRole("img", { name: "Compressed receipt preview" }),
+  ).toBeVisible();
+  const save = form.getByRole("button", { name: "Save expense", exact: true });
+  await expect(save).toBeEnabled();
+  await form.screenshot({
+    path: `artifacts/${testInfo.project.name}-new-expense-with-receipt.png`,
+    style: "header, .activity-tabs { position: static !important; }",
+  });
+  await save.click();
+  await expect
+    .poll(() => fixture.getSavedExpense())
+    .toMatchObject({ p_description: "Market lunch", p_amount_minor: "24000" });
+  await expect
+    .poll(() => fixture.getReceipts())
+    .toMatchObject([{ expense_id: "expense-added", status: "ready" }]);
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+  expect(fixture.getUploadedReceipt()).toBeDefined();
+});
+
+test("after financial save, a receipt upload retry never creates the expense again", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page, { failReceiptUploadOnce: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  await form.getByLabel("What was it for?").fill("Receipt retry lunch");
+  await form.getByLabel("Amount (THB)").fill("55");
+  const data = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 40;
+    c.height = 40;
+    c.getContext("2d")!.fillRect(0, 0, 40, 40);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await form.getByLabel("Receipt photo (optional)").setInputFiles({
+    name: "receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
+  await form.getByRole("button", { name: "Save expense", exact: true }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Expense saved; receipt pending." }),
+  ).toBeVisible();
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+  fixture.failNextReceiptUpload();
+  await page.reload();
+  await openTrip(page);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Expense saved; receipt pending." }),
+  ).toBeVisible();
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+  await page.locator(".offline-queue > summary").click();
+  const retry = page.getByRole("button", { name: "Retry receipt upload" });
+  await retry.click();
+  await expect
+    .poll(() => fixture.getReceipts())
+    .toMatchObject([{ expense_id: "expense-added", status: "ready" }]);
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+  expect(fixture.getReceiptInsertCount()).toBe(1);
+});
+
+test("keeps the compressed receipt in the outbox across reload and resumes the same expense operation", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page);
+  let apiOffline = true;
+  await page.route("**/rest/v1/rpc/create_expense", async (route) => {
+    if (apiOffline) await route.abort("failed");
+    else await route.fallback();
+  });
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const form = page.locator(".expense-entry");
+  await form.locator(":scope > summary").click();
+  await form.getByLabel("What was it for?").fill("Offline receipt expense");
+  await form.getByLabel("Amount (THB)").fill("80");
+  const data = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 80;
+    c.height = 60;
+    c.getContext("2d")!.fillRect(0, 0, 80, 60);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await form.getByLabel("Receipt photo (optional)").setInputFiles({
+    name: "receipt.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
+  await form.getByRole("button", { name: "Save expense", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({
+      hasText:
+        "Could not send yet. Your item is saved and will retry when connected.",
+    }),
+  ).toBeVisible();
+  const persisted = () =>
+    page.evaluate(async () => {
+      const opened = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("travelmate");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const rows = await new Promise<Record<string, unknown>[]>(
+        (resolve, reject) => {
+          const request = opened
+            .transaction("outbox", "readonly")
+            .objectStore("outbox")
+            .getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        },
+      );
+      const row = rows.find((item) => item.kind === "expense");
+      const receipt = row?.receipt as { id?: string; blob?: Blob } | undefined;
+      return {
+        id: row?.id,
+        receiptId: receipt?.id,
+        bytes: receipt?.blob?.size ?? 0,
+      };
+    });
+  await expect.poll(persisted).toMatchObject({ bytes: expect.any(Number) });
+  const beforeReload = await persisted();
+  expect(beforeReload.bytes).toBeGreaterThan(0);
+  expect(beforeReload.id).toBeTruthy();
+  await page.reload();
+  await openTrip(page);
+  const afterReload = await persisted();
+  expect(afterReload).toEqual(beforeReload);
+  expect(fixture.getExpenseOperationIds()).toHaveLength(0);
+  apiOffline = false;
+  await page.getByText("Saved on this device").click();
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect
+    .poll(() => fixture.getReceipts())
+    .toMatchObject([{ expense_id: "expense-added", status: "ready" }]);
+  expect(fixture.getExpenseOperationIds()).toHaveLength(1);
+  expect(fixture.getExpenseOperationIds()[0]).toBe(beforeReload.id);
+});
+
+test("organizer deletion cancellation does not write; confirmed deletion precedes receipt cleanup", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page, { seedReceipt: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const expense = page
+    .locator("article.stop")
+    .filter({ hasText: "Airport taxi" });
+  const cancelPrompt = page.waitForEvent("dialog").then(async (dialog) => {
+    expect(dialog.message()).toContain("Recorded payments stay unchanged.");
+    await dialog.dismiss();
+  });
+  await expense.getByRole("button", { name: "Delete expense" }).click();
+  await cancelPrompt;
+  expect(
+    fixture.getRpcCalls().filter((call) => call.fn === "delete_expense"),
+  ).toHaveLength(0);
+  const confirmPrompt = page.waitForEvent("dialog").then(async (dialog) => {
+    expect(dialog.message()).toContain("Recorded payments stay unchanged.");
+    await dialog.accept();
+  });
+  await expense.getByRole("button", { name: "Delete expense" }).click();
+  await confirmPrompt;
+  await expect
+    .poll(() => fixture.getLifecycleEvents())
+    .toEqual(["delete_expense", "storage_remove"]);
+  await expect(
+    page.locator("article.stop").filter({ hasText: "Airport taxi" }),
+  ).toHaveCount(0);
+  expect(fixture.getReceiptStorageEvents()).toEqual([
+    `remove:${tripId}/expense-1/receipt-seeded.jpg`,
+  ]);
+});
+
+test("reports failed receipt cleanup and retries without restoring the deleted expense", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page, {
+    seedReceipt: true,
+    failReceiptCleanup: true,
+  });
+  await page.goto("/");
+  await openTrip(page);
+  await page
+    .getByRole("navigation", { name: "Trip sections" })
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  const expense = page
+    .locator("article.stop")
+    .filter({ hasText: "Airport taxi" });
+  const confirmPrompt = page.waitForEvent("dialog").then(async (dialog) => {
+    expect(dialog.message()).toContain("Recorded payments stay unchanged.");
+    await dialog.accept();
+  });
+  await expense.getByRole("button", { name: "Delete expense" }).click();
+  await confirmPrompt;
+  await expect(
+    page.locator(".pending").filter({ hasText: "Receipt cleanup pending" }),
+  ).toBeVisible();
+  expect(fixture.getLifecycleEvents()).toEqual(["delete_expense"]);
+  await page.getByRole("button", { name: "Retry receipt cleanup" }).click();
+  await expect
+    .poll(() => fixture.getLifecycleEvents())
+    .toEqual(["delete_expense", "storage_remove"]);
+  await expect(
+    page.locator(".pending").filter({ hasText: "Receipt cleanup pending" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("article.stop").filter({ hasText: "Airport taxi" }),
+  ).toHaveCount(0);
+});
+
+for (const role of ["approved guest", "plan editor"] as const) {
+  test(`${role} cannot delete expenses`, async ({ page }) => {
+    await installFixture(
+      page,
+      role === "plan editor" ? { editor: true } : { participant: true },
+    );
+    await page.goto("/");
+    await openTrip(page);
+    await page
+      .getByRole("navigation", { name: "Trip sections" })
+      .getByRole("button", { name: "Expenses", exact: true })
+      .click();
+    const expense = page
+      .locator("article.stop")
+      .filter({ hasText: "Airport taxi" });
+    await expect(
+      expense.getByRole("button", { name: "Delete expense" }),
+    ).toHaveCount(0);
+  });
+}
 
 test("compresses a receipt before upload, displays it, and removes its private file and metadata", async ({
   page,

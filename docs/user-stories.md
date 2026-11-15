@@ -259,3 +259,7 @@ Issues #35, #36 and #37 were opened before implementation. The English user stor
 Issue: https://github.com/greatng/wherewhere/issues/38
 
 As a traveler, I can save valid currency amounts without false browser step errors. AC1 uses the smallest positive currency unit as both min and step in create/correction forms (JPY: 1). AC2 preserves THB/USD 0.01 and allows KWD 0.001, retaining exact integer parsing, positive limits and offline idempotence. AC3 adds a real browser regression covering validity plus successful create/correction saves on desktop/mobile. The original JPY test failed on 1000 before the fix; all six JPY/THB/KWD browser cases pass afterward. Seven money tests, lint and production build pass. No migration is required.
+
+## US39–US40 — create with a receipt and delete expenses
+
+Issues #39 and #40 were opened before implementation. The English stories and acceptance criteria are in [expense-entry-and-deletion.md](stories/expense-entry-and-deletion.md). New-expense photos persist in the owner-scoped outbox; a confirmed financial ID prevents photo retries from creating a duplicate expense. Organizers can delete incorrect expenses with version checks, ledger recalculation and retry-safe receipt cleanup. This supersedes the earlier saved-expense-only photo flow in US37.

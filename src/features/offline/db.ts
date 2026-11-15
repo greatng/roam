@@ -24,6 +24,8 @@ export type PendingOperation = {
   tripId: string;
   kind: "check_in" | "expense";
   payload: Record<string, unknown>;
+  receipt?: { id: string; blob: Blob; width: number; height: number };
+  expenseId?: string;
   createdAt: number;
   state: "pending" | "sending" | "failed" | "blocked";
   error?: string;
