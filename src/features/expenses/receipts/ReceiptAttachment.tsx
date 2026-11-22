@@ -2,13 +2,10 @@ import { useEffect, useState } from "preact/hooks";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { supabase } from "../../../shared/supabase/client";
 import { Button } from "../../../shared/ui/Button";
-import {
-  compressReceipt,
-  RECEIPT_MAX_BYTES,
-  type CompressedReceipt,
-} from "./compress";
+import { compressReceipt, type CompressedReceipt } from "./compress";
 import { loadExpenseReceipt, type ExpenseReceipt } from "./api";
 import { ReceiptSourcePicker } from "./ReceiptSourcePicker";
+import { ReceiptPreview } from "./ReceiptPreview";
 
 export type ReceiptAttachmentProps = {
   expenseId: string;
@@ -440,20 +437,11 @@ export function ReceiptAttachment({
         )}
         {active && photo && (
           <>
-            <img
-              class="receipt-attachment__photo"
-              src={previewUrl ?? undefined}
-              alt={tr(
-                thai,
-                "Compressed receipt preview",
-                "ตัวอย่างใบเสร็จที่บีบอัดแล้ว",
-              )}
+            <ReceiptPreview
+              url={previewUrl}
+              bytes={photo.blob.size}
+              thai={thai}
             />
-            <p>
-              {tr(thai, "Compressed size", "ขนาดหลังบีบอัด")}:{" "}
-              {Math.ceil(photo.blob.size / 1024)} KiB /{" "}
-              {RECEIPT_MAX_BYTES / 1024} KiB
-            </p>
             <Button
               type="button"
               size="small"

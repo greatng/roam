@@ -386,6 +386,7 @@ fieldset {
   scroll-margin-block-start: 8rem;
 }
 details > summary {
+  align-content: center;
   cursor: pointer;
   font-weight: 700;
   min-height: 44px;
@@ -643,27 +644,8 @@ details > summary {
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .trip-member-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.5rem;
-    min-width: 0;
-    padding: 0.45rem 0;
-  }
   .trip-member-row > :first-child {
     flex: 1 1 8rem;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .trip-member-row button {
-    min-height: 44px;
-    margin: 0;
-  }
-  .member-permission {
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.35;
   }
   .plan-night + .plan-night {
     margin-top: 1rem;
@@ -708,6 +690,26 @@ details > summary {
 }
 .account-menu p {
   overflow-wrap: anywhere;
+}
+.trip-member-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  padding-block: 0.45rem;
+}
+.trip-member-row > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.trip-member-row button {
+  min-height: 44px;
+  margin: 0;
+}
+.member-permission {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 .trip-dashboard {
   background: transparent;
@@ -892,6 +894,15 @@ button.plan-icon-button {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: #f8f5ed;
+}
+.plan-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block-start: 0.35rem;
+}
+.plan-editor-actions button {
+  margin: 0;
 }
 @media (max-width: 560px) {
   .activity.activity-plan .plan h3,
@@ -1609,7 +1620,7 @@ button.overflow-trigger {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .itinerary-fab button,
+  button.itinerary-fab,
   .overflow-trigger,
   .overflow-panel button {
     transition: none;

@@ -1917,6 +1917,17 @@ test.describe("Plan editor regressions", () => {
     await expect(editStayForm.getByLabel("Phone")).toHaveValue(
       "+66 2 123 4567",
     );
+    const editorActions = editStayForm.locator(".plan-editor-actions");
+    for (const name of ["Save accommodation", "Cancel"]) {
+      const action = editorActions.getByRole("button", { name, exact: true });
+      await expect(action.locator("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+      const bounds = (await action.boundingBox())!;
+      expect(bounds.width).toBeGreaterThanOrEqual(44);
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+    }
     const currentViewport = page.viewportSize();
     if (currentViewport && currentViewport.width > 600)
       await page.setViewportSize({
@@ -2814,6 +2825,8 @@ test.describe("Daily itinerary browser regressions", () => {
     await expect(activity.getByRole("menu")).toHaveCount(0);
 
     const fab = itinerary.getByRole("button", { name: "Edit itinerary" });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(fab).toHaveCSS("transition-duration", "0s");
     await itinerary
       .locator(".plan-night")
       .first()
@@ -2825,8 +2838,19 @@ test.describe("Daily itinerary browser regressions", () => {
         path: "artifacts/mobile-chromium-itinerary-viewport-fixture-preview.png",
       });
     }
-    await fab.click();
     const actions = itinerary.getByRole("menu", { name: "Itinerary actions" });
+    await fab.press("ArrowUp");
+    await expect(
+      actions.getByRole("menuitem", { name: "Add accommodation" }),
+    ).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(
+      actions.getByRole("menuitem", { name: "Add activity" }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(actions).toHaveCount(0);
+    await expect(fab).toBeFocused();
+    await fab.click();
     await expect(actions).toBeInViewport({ ratio: 1 });
     await expect(
       actions.getByRole("menuitem", { name: "Add activity" }),

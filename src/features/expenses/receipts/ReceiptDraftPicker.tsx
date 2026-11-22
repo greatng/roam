@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Button } from "../../../shared/ui/Button";
-import {
-  compressReceipt,
-  RECEIPT_MAX_BYTES,
-  type CompressedReceipt,
-} from "./compress";
+import { compressReceipt, type CompressedReceipt } from "./compress";
 import { ReceiptSourcePicker } from "./ReceiptSourcePicker";
+import { ReceiptPreview } from "./ReceiptPreview";
 
 export type ReceiptDraftPickerProps = {
   photo: CompressedReceipt | null;
@@ -104,20 +101,11 @@ export function ReceiptDraftPicker({
       />
       {photo && (
         <div class="receipt-draft-picker__preview">
-          <img
-            class="receipt-attachment__photo"
-            src={previewUrl ?? undefined}
-            alt={tr(
-              thai,
-              "Compressed receipt preview",
-              "ตัวอย่างใบเสร็จที่บีบอัดแล้ว",
-            )}
+          <ReceiptPreview
+            url={previewUrl}
+            bytes={photo.blob.size}
+            thai={thai}
           />
-          <p>
-            {tr(thai, "Compressed size", "ขนาดหลังบีบอัด")}:{" "}
-            {Math.ceil(photo.blob.size / 1024)} KiB / {RECEIPT_MAX_BYTES / 1024}{" "}
-            KiB
-          </p>
           <Button
             type="button"
             size="small"

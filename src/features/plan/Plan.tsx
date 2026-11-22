@@ -5,6 +5,8 @@ import {
   type ActivityTag,
 } from "./ActivityTag";
 import { ItineraryExport } from "./ItineraryExport";
+import { PlanEditorActions } from "./PlanEditorActions";
+import { TransportSelect, transportLabel } from "./TransportSelect";
 import type { PdfDay, PdfLine } from "./itinerary-pdf";
 import { Button } from "../../shared/ui/Button";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -14,7 +16,6 @@ import { cacheTripData, readCachedTripData } from "../offline/db";
 import { expandDateRange, formatDateLabel } from "./dates";
 import { tripWallTimeToIso } from "./timezone";
 import { revealEditor } from "../../shared/editor-navigation";
-import { ActionIcon } from "../../shared/ActionIcon";
 import { OverflowMenu } from "../../shared/ui/OverflowMenu";
 import { stayForDate } from "./day";
 
@@ -57,36 +58,6 @@ type Activity = {
   transport_mode: string | null;
   position: number;
   version: number;
-};
-const modes = [
-  "walk",
-  "car",
-  "taxi",
-  "bus",
-  "train",
-  "boat",
-  "flight",
-  "other",
-];
-const trLabel: Record<string, string> = {
-  walk: "Walk",
-  car: "Car",
-  taxi: "Taxi",
-  bus: "Bus",
-  train: "Train",
-  boat: "Boat",
-  flight: "Flight",
-  other: "Other",
-};
-const thaiLabel: Record<string, string> = {
-  walk: "เดิน",
-  car: "รถยนต์",
-  taxi: "แท็กซี่",
-  bus: "รถบัส",
-  train: "รถไฟ",
-  boat: "เรือ",
-  flight: "เครื่องบิน",
-  other: "อื่น ๆ",
 };
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Please try again.";
@@ -132,7 +103,6 @@ export function Plan({
     organizer && !!initialStay,
   );
   const [showActivityEditor, setShowActivityEditor] = useState(false);
-  const [showOrganizerActions, setShowOrganizerActions] = useState(false);
   const [planView, setPlanView] = useState<"daily" | "accommodation">(
     organizer && initialStay ? "accommodation" : "daily",
   );
@@ -150,8 +120,6 @@ export function Plan({
   const nightEditorRef = useRef<HTMLFormElement>(null);
   const stayEditorRef = useRef<HTMLFormElement>(null);
   const activityEditorRef = useRef<HTMLFormElement>(null);
-  const organizerActionsRef = useRef<HTMLDivElement>(null);
-  const organizerFocusIndex = useRef(0);
   const nights = useQuery({
     queryKey: ["plan-nights", uid, trip.id],
     queryFn: async () => {
@@ -273,7 +241,9 @@ export function Plan({
       setNightForm(null);
       setReplaceRange(false);
       setShowNightEditor(false);
-      setNotice(t("Destination nights saved.", "บันทึกเมืองสำหรับคืนที่เลือกแล้ว"));
+      setNotice(
+        t("Destination nights saved.", "บันทึกเมืองสำหรับคืนที่เลือกแล้ว"),
+      );
       await refresh();
     } catch (error) {
       setNotice(
@@ -457,7 +427,7 @@ export function Plan({
       if (night) {
         lines.push({ text: night.city, style: "day" });
         if (night.transport_mode)
-          lines.push({ text: tLabel(night.transport_mode, thai) });
+          lines.push({ text: transportLabel(night.transport_mode, thai) });
       }
       if (stay) {
         lines.push({ text: t("Accommodation", "ที่พัก") + " · " + stay.name });
@@ -483,7 +453,7 @@ export function Plan({
         const tag = activityTagLabel(activity.activity_tag, thai);
         if (tag) lines.push({ text: tag, style: "tag" });
         if (activity.transport_mode)
-          lines.push({ text: tLabel(activity.transport_mode, thai) });
+          lines.push({ text: transportLabel(activity.transport_mode, thai) });
         for (const text of [
           activity.address,
           activity.meeting_info,
@@ -509,20 +479,6 @@ export function Plan({
     if (showActivityEditor && editorNavigationTarget === "activity")
       revealEditor(activityEditorRef.current);
   }, [showActivityEditor, editorNavigation, editorNavigationTarget]);
-  useEffect(() => {
-    if (!showOrganizerActions) return;
-    const actionItems =
-      organizerActionsRef.current?.querySelectorAll<HTMLButtonElement>(
-        "[role='menuitem']",
-      );
-    actionItems?.[organizerFocusIndex.current]?.focus();
-    const outside = (event: PointerEvent) => {
-      if (!organizerActionsRef.current?.contains(event.target as Node))
-        setShowOrganizerActions(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [showOrganizerActions]);
   return (
     <section class="plan" aria-label={t("Trip itinerary", "แผนการเดินทาง")}>
       <h2>{t("Trip itinerary", "แผนการเดินทาง")}</h2>
@@ -606,7 +562,7 @@ export function Plan({
                       <p>{night.city}</p>
                       {night.transport_mode && (
                         <p class="plan-day-transport">
-                          {tLabel(night.transport_mode, thai)}
+                          {transportLabel(night.transport_mode, thai)}
                         </p>
                       )}
                       {organizer && (
@@ -615,10 +571,12 @@ export function Plan({
                             `Options for ${night.city}`,
                             `ตัวเลือกสำหรับ ${night.city}`,
                           )}
-                          name={night.city}
                           items={[
                             {
-                              label: t("Edit this night", "แก้ไขเมืองของคืนนี้"),
+                              label: t(
+                                "Edit this night",
+                                "แก้ไขเมืองของคืนนี้",
+                              ),
                               onSelect: () => {
                                 setNightForm(night);
                                 setReplaceRange(false);
@@ -674,7 +632,6 @@ export function Plan({
                               `Options for ${stay.name}`,
                               `ตัวเลือกสำหรับ ${stay.name}`,
                             )}
-                            name={stay.name}
                             items={[
                               {
                                 label: t("Edit accommodation", "แก้ไขที่พัก"),
@@ -742,7 +699,6 @@ export function Plan({
                                 `Options for ${activity.title}`,
                                 `ตัวเลือกสำหรับ ${activity.title}`,
                               )}
-                              name={activity.title}
                               items={[
                                 {
                                   label: t("Edit activity", "แก้ไขกิจกรรม"),
@@ -782,7 +738,7 @@ export function Plan({
                         )}
                         {activity.notes && <p>{activity.notes}</p>}
                         {activity.transport_mode && (
-                          <p>{tLabel(activity.transport_mode, thai)}</p>
+                          <p>{transportLabel(activity.transport_mode, thai)}</p>
                         )}
                       </div>
                     ))}
@@ -839,12 +795,13 @@ export function Plan({
                     />
                   </label>
                   <label>
-                    {t("Travel mode into this city", "เดินทางไปเมืองนี้ด้วยวิธีใด")}
-                    <ModeSelect
-                      name="transport"
+                    {t(
+                      "Travel mode into this city",
+                      "เดินทางไปเมืองนี้ด้วยวิธีใด",
+                    )}
+                    <TransportSelect
                       value={nightForm?.transport_mode ?? ""}
                       thai={thai}
-                      t={t}
                     />
                   </label>
                   <label>
@@ -858,38 +815,21 @@ export function Plan({
                       "ฉันยืนยันให้แทนที่เมืองที่บันทึกไว้ในคืนที่เลือก",
                     )}
                   </label>
-                  <Button
-                    type="submit"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={
+                  <PlanEditorActions
+                    saveLabel={
                       nightForm
-                        ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
+                        ? t(
+                            "Save night or range",
+                            "บันทึกเมืองสำหรับคืนที่เลือก",
+                          )
                         : t("Save destination", "บันทึกเมือง")
                     }
-                    title={
-                      nightForm
-                        ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
-                        : t("Save destination", "บันทึกเมือง")
-                    }
-                  >
-                    <ActionIcon kind="save" />
-                  </Button>
-                  <Button
-                    type="button"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Cancel", "ยกเลิก")}
-                    title={t("Cancel", "ยกเลิก")}
-                    onClick={() => {
+                    cancelLabel={t("Cancel", "ยกเลิก")}
+                    onCancel={() => {
                       setNightForm(null);
                       setShowNightEditor(false);
                     }}
-                  >
-                    <ActionIcon kind="cancel" />
-                  </Button>
+                  />
                 </form>
               )}
             </>
@@ -927,7 +867,6 @@ export function Plan({
                     `Options for ${stay.name}`,
                     `ตัวเลือกสำหรับ ${stay.name}`,
                   )}
-                  name={stay.name}
                   items={[
                     {
                       label: t("Edit accommodation", "แก้ไขที่พัก"),
@@ -1022,30 +961,14 @@ export function Plan({
                       defaultValue={stayForm?.phone ?? ""}
                     />
                   </label>
-                  <Button
-                    type="submit"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Save accommodation", "บันทึกที่พัก")}
-                    title={t("Save accommodation", "บันทึกที่พัก")}
-                  >
-                    <ActionIcon kind="save" />
-                  </Button>
-                  <Button
-                    type="button"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Cancel", "ยกเลิก")}
-                    title={t("Cancel", "ยกเลิก")}
-                    onClick={() => {
+                  <PlanEditorActions
+                    saveLabel={t("Save accommodation", "บันทึกที่พัก")}
+                    cancelLabel={t("Cancel", "ยกเลิก")}
+                    onCancel={() => {
                       setStayForm(null);
                       setShowStayEditor(false);
                     }}
-                  >
-                    <ActionIcon kind="cancel" />
-                  </Button>
+                  />
                 </form>
               )}
             </>
@@ -1053,144 +976,48 @@ export function Plan({
         </div>
       )}
       {organizer && (
-        <div class="plan-organizer-actions" ref={organizerActionsRef}>
-          {showOrganizerActions && (
-            <div
-              class="overflow-panel"
-              role="menu"
-              tabIndex={-1}
-              aria-label={t("Itinerary actions", "การจัดการแผนการเดินทาง")}
-              onKeyDown={(event) => {
-                const items = Array.from(
-                  organizerActionsRef.current?.querySelectorAll<HTMLButtonElement>(
-                    "[role='menuitem']",
-                  ) ?? [],
-                );
-                const index = items.indexOf(
-                  document.activeElement as HTMLButtonElement,
-                );
-                if (event.key === "Escape") {
-                  setShowOrganizerActions(false);
-                  requestAnimationFrame(() =>
-                    (
-                      organizerActionsRef.current?.querySelector(
-                        ".itinerary-fab",
-                      ) as HTMLButtonElement | null
-                    )?.focus(),
-                  );
-                }
-                if (
-                  !showOrganizerActions &&
-                  (event.key === "ArrowDown" || event.key === "ArrowUp")
-                ) {
-                  event.preventDefault();
-                  organizerFocusIndex.current = event.key === "ArrowUp" ? 3 : 0;
-                  setShowOrganizerActions(true);
-                }
-                if (event.key === "Tab") setShowOrganizerActions(false);
-                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                  if (items.length && index >= 0) {
-                    event.preventDefault();
-                    items[
-                      (index +
-                        (event.key === "ArrowDown" ? 1 : items.length - 1)) %
-                        items.length
-                    ]?.focus();
-                  }
-                }
-                if (event.key === "Home") {
-                  event.preventDefault();
-                  items[0]?.focus();
-                }
-                if (event.key === "End") {
-                  event.preventDefault();
-                  items.at(-1)?.focus();
-                }
-              }}
-            >
-              <Button
-                type="button"
-                appearance="tertiary"
-                role="menuitem"
-                onClick={() => {
-                  setActivityForm(null);
-                  setActivityDate(trip.start_date);
-                  setShowActivityEditor(true);
-                  requestEditorNavigation("activity");
-                  setShowOrganizerActions(false);
-                }}
-              >
-                {t("Add activity", "เพิ่มกิจกรรม")}
-              </Button>
-              <Button
-                type="button"
-                appearance="tertiary"
-                role="menuitem"
-                onClick={() => {
-                  setPlanView("daily");
-                  setNightForm(null);
-                  setShowNightEditor(true);
-                  requestEditorNavigation("night");
-                  setShowOrganizerActions(false);
-                }}
-              >
-                {t(
-                  "Add city for a night or range",
-                  "เพิ่มเมืองสำหรับคืนเดียวหรือหลายคืน",
-                )}
-              </Button>
-              <Button
-                type="button"
-                appearance="tertiary"
-                role="menuitem"
-                onClick={() => {
-                  setPlanView("accommodation");
-                  setShowOrganizerActions(false);
-                }}
-              >
-                {t("Accommodation management", "จัดการที่พัก")}
-              </Button>
-              <Button
-                type="button"
-                appearance="tertiary"
-                role="menuitem"
-                onClick={() => {
-                  setPlanView("accommodation");
-                  setStayForm(null);
-                  setStayDate(trip.start_date);
-                  setShowStayEditor(true);
-                  requestEditorNavigation("stay");
-                  setShowOrganizerActions(false);
-                }}
-              >
-                {t("Add accommodation", "เพิ่มที่พัก")}
-              </Button>
-            </div>
-          )}
-          <Button
-            type="button"
-            svgOnly
-            appearance="primary"
-            class="itinerary-fab"
-            aria-label={t("Edit itinerary", "แก้ไขแผนการเดินทาง")}
-            title={t("Edit itinerary", "แก้ไขแผนการเดินทาง")}
-            aria-expanded={showOrganizerActions}
-            aria-haspopup="menu"
-            onKeyDown={(event) => {
-              if (
-                !showOrganizerActions &&
-                (event.key === "ArrowDown" || event.key === "ArrowUp")
-              ) {
-                event.preventDefault();
-                organizerFocusIndex.current = event.key === "ArrowUp" ? 3 : 0;
-                setShowOrganizerActions(true);
-              }
-            }}
-            onClick={() => setShowOrganizerActions(!showOrganizerActions)}
-          >
-            <ActionIcon kind="edit" />
-          </Button>
-        </div>
+        <OverflowMenu
+          placement="floating"
+          label={t("Edit itinerary", "แก้ไขแผนการเดินทาง")}
+          menuLabel={t("Itinerary actions", "การจัดการแผนการเดินทาง")}
+          items={[
+            {
+              label: t("Add activity", "เพิ่มกิจกรรม"),
+              onSelect: () => {
+                setActivityForm(null);
+                setActivityDate(trip.start_date);
+                setShowActivityEditor(true);
+                requestEditorNavigation("activity");
+              },
+            },
+            {
+              label: t(
+                "Add city for a night or range",
+                "เพิ่มเมืองสำหรับคืนเดียวหรือหลายคืน",
+              ),
+              onSelect: () => {
+                setPlanView("daily");
+                setNightForm(null);
+                setShowNightEditor(true);
+                requestEditorNavigation("night");
+              },
+            },
+            {
+              label: t("Accommodation management", "จัดการที่พัก"),
+              onSelect: () => setPlanView("accommodation"),
+            },
+            {
+              label: t("Add accommodation", "เพิ่มที่พัก"),
+              onSelect: () => {
+                setPlanView("accommodation");
+                setStayForm(null);
+                setStayDate(trip.start_date);
+                setShowStayEditor(true);
+                requestEditorNavigation("stay");
+              },
+            },
+          ]}
+        />
       )}
       {organizer && showActivityEditor && (
         <section class="plan-activity-editor">
@@ -1266,11 +1093,9 @@ export function Plan({
             </label>
             <label>
               {t("Travel mode into activity", "เดินทางไปทำกิจกรรมด้วยวิธีใด")}
-              <ModeSelect
-                name="transport"
+              <TransportSelect
                 value={activityForm?.transport_mode ?? ""}
                 thai={thai}
-                t={t}
               />
             </label>
             <ActivityTagField
@@ -1278,60 +1103,19 @@ export function Plan({
               tag={activityForm?.activity_tag}
               thai={thai}
             />
-            <Button
-              type="submit"
-              svgOnly
-              appearance="tertiary"
-              class="plan-icon-button icon44"
-              aria-label={t("Save activity", "บันทึกกิจกรรม")}
-              title={t("Save activity", "บันทึกกิจกรรม")}
-            >
-              <ActionIcon kind="save" />
-            </Button>
-            <Button
-              type="button"
-              svgOnly
-              appearance="tertiary"
-              class="plan-icon-button icon44"
-              aria-label={t("Cancel", "ยกเลิก")}
-              title={t("Cancel", "ยกเลิก")}
-              onClick={() => {
+            <PlanEditorActions
+              saveLabel={t("Save activity", "บันทึกกิจกรรม")}
+              cancelLabel={t("Cancel", "ยกเลิก")}
+              onCancel={() => {
                 setActivityForm(null);
                 setShowActivityEditor(false);
               }}
-            >
-              <ActionIcon kind="cancel" />
-            </Button>
+            />
           </form>
         </section>
       )}
     </section>
   );
-}
-function ModeSelect({
-  name,
-  value,
-  thai,
-  t,
-}: {
-  name: string;
-  value: string;
-  thai: boolean;
-  t: (en: string, th: string) => string;
-}) {
-  return (
-    <select name={name} defaultValue={value}>
-      <option value="">{t("Choose (optional)", "เลือก (ไม่บังคับ)")}</option>
-      {modes.map((mode) => (
-        <option key={mode} value={mode}>
-          {thai ? thaiLabel[mode] : trLabel[mode]}
-        </option>
-      ))}
-    </select>
-  );
-}
-function tLabel(value: string, thai: boolean) {
-  return thai ? (thaiLabel[value] ?? value) : (trLabel[value] ?? value);
 }
 function addDate(date: string, days: number) {
   const d = new Date(`${date}T00:00:00Z`);

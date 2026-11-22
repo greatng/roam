@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Button } from "./Button";
+import { IconButton } from "./IconButton";
 import { ActionIcon } from "../ActionIcon";
 
 export type OverflowMenuItem = {
@@ -8,28 +9,29 @@ export type OverflowMenuItem = {
   danger?: boolean;
 };
 
-/** Compact, keyboard-operable action menu for a single itinerary record. */
+/** Compact, keyboard-operable menu for record or itinerary actions. */
 export function OverflowMenu({
-  name,
   label,
   items,
+  placement = "record",
+  menuLabel,
 }: {
-  name: string;
-  label?: string;
+  label: string;
   items: OverflowMenuItem[];
+  placement?: "record" | "floating";
+  menuLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+  const menuId = useId();
   const focusIndex = useRef(0);
   const close = (restore = false) => {
     setOpen(false);
     if (restore)
-      (
-        root.current?.querySelector(
-          ".overflow-trigger",
-        ) as HTMLButtonElement | null
-      )?.focus();
+      root.current
+        ?.querySelector<HTMLButtonElement>("[aria-haspopup='menu']")
+        ?.focus();
   };
   // Focus before paint: a delayed opening effect could steal restored Escape focus.
   useLayoutEffect(() => {
@@ -44,6 +46,14 @@ export function OverflowMenu({
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
   const onKeyDown = (event: KeyboardEvent) => {
+    if (!open) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        focusIndex.current = event.key === "ArrowUp" ? items.length - 1 : 0;
+        setOpen(true);
+      }
+      return;
+    }
     if (event.key === "Tab") {
       close();
       return;
@@ -55,12 +65,6 @@ export function OverflowMenu({
     if (event.key === "Escape") {
       event.preventDefault();
       close(true);
-    }
-    if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-      event.preventDefault();
-      focusIndex.current = event.key === "ArrowUp" ? items.length - 1 : 0;
-      setOpen(true);
-      return;
     }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -78,46 +82,57 @@ export function OverflowMenu({
       buttons.at(-1)?.focus();
     }
   };
+  const floating = placement === "floating";
+  const panel = open && (
+    <div
+      class="overflow-panel"
+      id={menuId}
+      role="menu"
+      aria-label={menuLabel ?? label}
+      tabIndex={-1}
+      ref={menu}
+      onKeyDown={onKeyDown}
+    >
+      {items.map((item) => (
+        <Button
+          type="button"
+          appearance="tertiary"
+          role="menuitem"
+          class={`overflow-menu-item ${item.danger ? "danger" : ""}`}
+          key={item.label}
+          onClick={() => {
+            close();
+            item.onSelect();
+          }}
+        >
+          {item.label}
+        </Button>
+      ))}
+    </div>
+  );
   return (
-    <div class="overflow-menu" ref={root}>
-      <Button
-        type="button"
-        svgOnly
-        appearance="tertiary"
-        class="overflow-trigger"
-        aria-label={label ?? `Options for ${name}`}
+    <div
+      class={floating ? "plan-organizer-actions" : "overflow-menu"}
+      ref={root}
+    >
+      {floating && panel}
+      <IconButton
+        appearance={floating ? "primary" : "tertiary"}
+        class={floating ? "itinerary-fab" : "overflow-trigger"}
+        aria-label={label}
+        title={floating ? label : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         onKeyDown={onKeyDown}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          focusIndex.current = 0;
+          setOpen(!open);
+        }}
       >
-        <ActionIcon kind="ellipsis" />
-      </Button>
-      {open && (
-        <div
-          class="overflow-panel"
-          role="menu"
-          tabIndex={-1}
-          ref={menu}
-          onKeyDown={onKeyDown}
-        >
-          {items.map((item) => (
-            <Button
-              type="button"
-              appearance="tertiary"
-              role="menuitem"
-              class={`overflow-menu-item ${item.danger ? "danger" : ""}`}
-              key={item.label}
-              onClick={() => {
-                close();
-                item.onSelect();
-              }}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
-      )}
+        <ActionIcon kind={floating ? "edit" : "ellipsis"} />
+      </IconButton>
+      {!floating && panel}
     </div>
   );
 }
