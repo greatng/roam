@@ -1142,7 +1142,7 @@ export function Plan({
               />
             </label>
             <label>
-              {t("Destination time", "เวลาปลายทาง")}
+              {t("Activity time", "เวลากิจกรรม")}
               <input
                 name="starts"
                 type="time"

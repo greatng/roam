@@ -9,6 +9,7 @@ import { EmailAccess } from "../auth/EmailAccess";
 import { canCreateTrip } from "../auth/email";
 import { useMembers } from "../members/queries";
 import { pages } from "../../shared/supabase/pages";
+import { addCalendarDays } from "../plan/dates";
 import { redeem } from "../invites/redeem";
 import { removeTripReceiptFiles } from "../expenses/receipts/storage";
 
@@ -38,7 +39,6 @@ type TripRow = {
   status: string;
   start_date: string;
   end_date: string;
-  timezone: string;
 };
 function mayUseOfflineCache(error: unknown) {
   const candidate = error as { status?: number; code?: string } | null;
@@ -60,6 +60,10 @@ export function App() {
     code: string;
     link: string;
   } | null>(null);
+  const [inviteExpiryDate, setInviteExpiryDate] = useState("");
+  const inviteCutoff = inviteExpiryDate
+    ? new Date(addCalendarDays(inviteExpiryDate, 1) + "T00:00:00")
+    : null;
   const qrPanel = useRef<HTMLElement>(null);
   const [route, setRoute] = useState(location.hash);
   const [invitationError, setInvitationError] = useState<
@@ -512,7 +516,7 @@ export function App() {
                   const createdTrip = await rpc("create_trip", {
                     p_title: f.get("title"),
                     p_name: f.get("name"),
-                    p_timezone: f.get("timezone"),
+                    p_timezone: "UTC",
                     p_currency: f.get("currency"),
                     p_start: f.get("start"),
                     p_end: f.get("end"),
@@ -528,11 +532,6 @@ export function App() {
                 ["start", t("Start date", "วันเริ่ม"), "date"],
                 ["end", t("End date", "วันสิ้นสุด"), "date"],
                 [
-                  "timezone",
-                  t("Destination timezone (IANA)", "เขตเวลาปลายทาง (IANA)"),
-                  "text",
-                ],
-                [
                   "currency",
                   t("Currency (e.g. THB)", "สกุลเงิน เช่น THB"),
                   "text",
@@ -545,14 +544,7 @@ export function App() {
                     type={type === "date" ? "date" : "text"}
                     required
                     maxLength={name === "currency" ? 3 : 80}
-                    defaultValue={
-                      name === "currency"
-                        ? "THB"
-                        : name === "timezone"
-                          ? "Asia/Bangkok"
-                          : undefined
-                    }
-                    placeholder={name === "timezone" ? "Asia/Tokyo" : undefined}
+                    defaultValue={name === "currency" ? "THB" : undefined}
                   />
                 </label>
               ))}
@@ -712,64 +704,17 @@ export function App() {
                                   "ตั้งค่าทริปและการเข้าถึง",
                                 )}
                               </summary>
-                              <details class="trip-timezone-settings">
-                                <summary>
-                                  {t(
-                                    "Advanced: destination time",
-                                    "ขั้นสูง: เวลาปลายทาง",
-                                  )}
-                                </summary>
-                                <form
-                                  key={trip.timezone}
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const f = new FormData(e.currentTarget);
-                                    void run(async () => {
-                                      await rpc("set_trip_timezone", {
-                                        p_trip_id: trip.id,
-                                        p_timezone: f.get("timezone"),
-                                      });
-                                    });
-                                  }}
-                                >
-                                  <p>
-                                    {t(
-                                      "Changing the destination timezone leaves saved timestamps unchanged. They will display in the new destination timezone, and activity days are grouped by that local date.",
-                                      "การเปลี่ยนเขตเวลาปลายทางจะไม่เปลี่ยนเวลาที่บันทึกไว้ แต่จะแสดงตามเขตเวลาใหม่ และจัดกลุ่มกิจกรรมตามวันที่ท้องถิ่น",
-                                    )}
-                                  </p>
-                                  <label>
-                                    {t(
-                                      "Destination timezone (IANA)",
-                                      "เขตเวลาปลายทาง (IANA)",
-                                    )}
-                                    <input
-                                      name="timezone"
-                                      required
-                                      maxLength={80}
-                                      defaultValue={trip.timezone}
-                                      placeholder="Asia/Tokyo"
-                                    />
-                                  </label>
-                                  <Button
-                                    disabled={busy || trip.status !== "active"}
-                                  >
-                                    {t("Save timezone", "บันทึกเขตเวลา")}
-                                  </Button>
-                                </form>
-                              </details>
                               <form
                                 onSubmit={(event) => {
                                   event.preventDefault();
-                                  const expiry = new FormData(
-                                    event.currentTarget,
-                                  ).get("expiry");
+                                  if (!inviteCutoff) return;
                                   void run(async () => {
                                     const [invite] = await rpc(
-                                      "create_reusable_invite",
+                                      "create_reusable_invite_until",
                                       {
                                         p_trip_id: trip.id,
-                                        p_expiry_date: expiry,
+                                        p_expires_at:
+                                          inviteCutoff.toISOString(),
                                       },
                                     );
                                     const link =
@@ -793,14 +738,36 @@ export function App() {
                                     "Invitation expiry date",
                                     "วันหมดอายุคำเชิญ",
                                   )}
-                                  <input name="expiry" type="date" required />
+                                  <input
+                                    name="expiry"
+                                    type="date"
+                                    required
+                                    value={inviteExpiryDate}
+                                    onInput={(event) =>
+                                      setInviteExpiryDate(
+                                        event.currentTarget.value,
+                                      )
+                                    }
+                                  />
                                 </label>
                                 <p>
-                                  {t(
-                                    "Valid through this date in",
-                                    "ใช้ได้จนสิ้นสุดวันที่เลือกในเขตเวลา",
-                                  )}{" "}
-                                  {trip.timezone}.{" "}
+                                  {inviteCutoff && (
+                                    <>
+                                      {t("Expires on", "หมดอายุวันที่")}{" "}
+                                      {new Intl.DateTimeFormat(
+                                        thai.value ? "th-TH" : "en",
+                                        {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                          hour: "numeric",
+                                          minute: "2-digit",
+                                          timeZoneName: "longOffset",
+                                        },
+                                      ).format(inviteCutoff)}
+                                      .{" "}
+                                    </>
+                                  )}
                                   {t(
                                     "A new invitation replaces the previous reusable invitation.",
                                     "คำเชิญใหม่จะแทนที่คำเชิญแบบใช้ซ้ำเดิม",

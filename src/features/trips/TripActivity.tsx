@@ -233,6 +233,7 @@ export function TripActivity({
 }) {
   const tr = (en: string, th: string) => (thai ? th : en);
   const destinationTimezone = trip.timezone;
+  const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const queryClient = useQueryClient();
   const expenseDraft = useExpenseDraft(uid, trip.id);
   const expensePhoto = expenseDraft.photo;
@@ -384,15 +385,13 @@ export function TripActivity({
       return (data ?? []) as unknown as ExpenseRevision[];
     },
   });
-  const actualToday = tripDateAt(new Date(), destinationTimezone);
+  const actualToday = tripDateAt(new Date(), deviceTimezone);
   const [selectedDay, setSelectedDay] = useState(() =>
     clampTripDate(actualToday, trip),
   );
   useEffect(() => {
-    setSelectedDay(
-      clampTripDate(tripDateAt(new Date(), destinationTimezone), trip),
-    );
-  }, [trip.id, trip.start_date, trip.end_date, destinationTimezone]);
+    setSelectedDay(clampTripDate(tripDateAt(new Date(), deviceTimezone), trip));
+  }, [trip.id, trip.start_date, trip.end_date, deviceTimezone]);
   const isActualToday = selectedDay === actualToday;
   const dayLabel = formatDateLabel(selectedDay, thai ? "th-TH" : "en");
   const tonightQuery = useQuery({
@@ -1032,6 +1031,7 @@ export function TripActivity({
     now,
     destinationTimezone,
     chosenStopId || undefined,
+    deviceTimezone,
   );
   const todayItems = stopsForTripDay(items, selectedDay, destinationTimezone);
   const nextPlannedDay = todayItems.length
@@ -1596,8 +1596,8 @@ export function TripActivity({
                     </label>
                     <label>
                       {tr(
-                        "Destination time (optional)",
-                        "เวลาปลายทาง (ไม่บังคับ)",
+                        "Activity time (optional)",
+                        "เวลากิจกรรม (ไม่บังคับ)",
                       )}
                       <input
                         name="time"
@@ -1765,7 +1765,7 @@ export function TripActivity({
                 <input
                   name="expenseDate"
                   type="date"
-                  defaultValue={actualToday}
+                  defaultValue={tripDateAt(new Date(), destinationTimezone)}
                   onInput={(event) => {
                     expenseDateEdited.current = true;
                     const time = event.currentTarget.form?.elements.namedItem(
