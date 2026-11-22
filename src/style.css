@@ -2,19 +2,45 @@
 
 :root {
   font-family: Inter, "Noto Sans Thai", system-ui, sans-serif;
-  color: #292a25;
-  background: #f5f1e8;
+  color: var(--ink);
+  background: var(--page);
   font-size: 16px;
   line-height: 1.5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --ink: #292a25;
-  --muted: #686961;
+  --muted: #565b50;
+  --page: #f5f1e8;
   --paper: #fffdf8;
-  --moss: #586a4a;
+  --moss: #465e3e;
   --moss-dark: #3b4b34;
   --terra: #b86248;
-  --line: #ded9cd;
+  --line: #d4cec0;
+  --surface-raised: #fffdf8;
+  --surface-soft: #efede3;
+  --surface-inset: #f8f5ed;
+  --field: #fffefa;
+  --field-border: #827e72;
+  --link: #3b4b34;
+  --control-text: #fffdf8;
+  --control-pressed: #303e2a;
+  --selected-surface: #e2eadc;
+  --selected-text: #2e4629;
+  --selected-line: #657b58;
+  --focus: #98442e;
+  --alert: #91362c;
+  --success-surface: #e4eddf;
+  --success-text: #344b2d;
+  --warning-surface: #f5e8d7;
+  --warning-text: #614022;
+  --danger-surface: #fff2eb;
+  --danger-button: #923e32;
+  --danger-hover: #783127;
+  --danger-text: #fffdf8;
+  --contact-surface: #f5e9df;
+  --contact-line: #d8b49d;
+  --day-heading: #88412e;
+  --motion-quick: 140ms;
 }
 * {
   box-sizing: border-box;
@@ -32,9 +58,8 @@ header {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.8rem max(1rem, calc((100vw - 1080px) / 2));
-  background: rgb(245 241 232 / 94%);
+  background: var(--page);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
 }
 header a {
   color: var(--ink);
@@ -57,17 +82,22 @@ h1 {
 }
 h2 {
   font-size: 1.5rem;
+  font-weight: 680;
   line-height: 1.25;
   letter-spacing: -0.03em;
   margin: 0.25rem 0 0.8rem;
 }
 h3 {
   font-size: 1.15rem;
+  font-weight: 650;
   line-height: 1.35;
   margin: 1.4rem 0 0.65rem;
 }
 p {
   margin: 0.45rem 0 0.8rem;
+}
+:root[lang="th"] :is(h1, h2) {
+  letter-spacing: normal;
 }
 section,
 form {
@@ -92,9 +122,9 @@ select {
   min-height: 54px;
   margin-top: 0.3rem;
   padding: 0.72rem 0.85rem;
-  border: 1.5px solid #bdb9ad;
+  border: 1.5px solid var(--field-border);
   border-radius: 12px;
-  background: #fffefa;
+  background: var(--field);
   color: var(--ink);
   font: inherit;
 }
@@ -114,32 +144,38 @@ button {
   border: 0;
   border-radius: 13px;
   background: var(--moss);
-  color: white;
+  color: var(--control-text);
   font: inherit;
   font-weight: 680;
   margin: 0.3rem 0.35rem 0.3rem 0;
   cursor: pointer;
   transition:
-    background 0.15s,
-    transform 0.15s;
+    background-color var(--motion-quick),
+    border-color var(--motion-quick),
+    transform var(--motion-quick);
 }
 button:hover:not(:disabled) {
   background: var(--moss-dark);
-  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.app-button--primary:active:not(:disabled) {
+  background: var(--control-pressed);
 }
 button:disabled {
   opacity: 0.55;
   cursor: wait;
 }
 a {
-  color: var(--moss-dark);
+  color: var(--link);
 }
 *:focus-visible {
-  outline: 3px solid var(--terra);
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 [role="alert"] {
-  color: #9d382d;
+  color: var(--alert);
 }
 img {
   max-width: 100%;
@@ -177,7 +213,7 @@ img {
 .activity-tabs {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   overflow-x: auto;
   max-width: 100%;
   background: var(--paper);
@@ -199,14 +235,21 @@ img {
 .activity-tabs button:hover:not(:disabled) {
   transform: none;
 }
-.activity-tabs button:not([aria-current="page"]):hover:not(:disabled) {
-  background: var(--line);
+.activity-tabs button:not([aria-current="page"]):is(:hover, :active):not(:disabled) {
+  background: var(--surface-soft);
   color: var(--ink);
 }
-.activity-tabs button[aria-current="page"] {
-  background: var(--moss-dark);
-  color: white;
-  box-shadow: none;
+.activity-tabs button[aria-current="page"],
+.activity-tabs button[aria-current="page"]:active:not(:disabled) {
+  background: var(--selected-surface);
+  color: var(--selected-text);
+  box-shadow: inset 0 0 0 1px var(--selected-line);
+}
+.activity-tabs button[aria-current="page"] .app-button__label,
+.plan-view-toggle button[aria-pressed="true"] .app-button__label {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.22em;
 }
 .activity-tabs button:focus-visible {
   outline-offset: -3px;
@@ -222,8 +265,8 @@ img {
   stroke-linejoin: round;
 }
 .next-stop {
-  background: #e8ecdf;
-  border-left: 5px solid var(--moss);
+  background: var(--success-surface);
+  border-left: 4px solid var(--selected-line);
   border-radius: 18px;
   padding: 1.35rem;
   margin: 1rem 0 1.5rem;
@@ -253,13 +296,15 @@ img {
   font-weight: 700;
 }
 .checkin {
-  background: var(--terra);
+  background: var(--danger-button);
+  color: var(--danger-text);
   min-width: 160px;
   font-size: 1.15rem;
   font-weight: 750;
 }
-.checkin:hover:not(:disabled) {
-  background: #984731;
+.checkin:hover:not(:disabled),
+.checkin:active:not(:disabled) {
+  background: var(--danger-hover);
 }
 .stop {
   background: var(--paper);
@@ -275,19 +320,31 @@ img {
   height: 38px;
   border-radius: 50%;
   background: var(--moss);
-  color: white;
+  color: var(--control-text);
   margin-right: 0.7rem;
 }
 .notice,
-.pending {
+.pending,
+.save-confirmation {
   border-radius: 12px;
   padding: 0.75rem 0.9rem;
-  background: #e8ecdf;
+  background: var(--success-surface);
+  color: var(--success-text);
   font-weight: 650;
 }
 .pending {
-  background: #f5e8d7;
-  color: #6a422b;
+  background: var(--warning-surface);
+  color: var(--warning-text);
+}
+.save-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border-inline-start: 3px solid var(--selected-line);
+}
+.save-confirmation .action-icon {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 .attendance,
 .balance {
@@ -310,8 +367,8 @@ img {
 .help-card {
   margin-top: 1rem;
   padding: 1rem;
-  background: #f4e5d9;
-  border: 1px solid #d8ad98;
+  background: var(--contact-surface);
+  border: 1px solid var(--contact-line);
   border-radius: 16px;
 }
 .help-card > strong {
@@ -329,15 +386,16 @@ img {
   padding: 1rem;
   border: 1px solid #c98470;
   border-radius: 14px;
-  background: #fff7f3;
+  background: var(--danger-surface);
 }
 .danger-zone summary {
-  color: #963d2b;
+  color: var(--alert);
   font-weight: 700;
   cursor: pointer;
 }
 .danger-button {
-  background: #963d2b;
+  background: var(--danger-button);
+  color: var(--danger-text);
 }
 fieldset {
   border: 1px solid var(--line);
@@ -390,6 +448,9 @@ details > summary {
   cursor: pointer;
   font-weight: 700;
   min-height: 44px;
+}
+details > summary:where(:hover) {
+  color: var(--link);
 }
 .guest-entry-form {
   margin: 0;
@@ -686,7 +747,7 @@ details > summary {
   max-height: calc(100dvh - 5rem);
   overflow-y: auto;
   margin: 0;
-  background: var(--paper);
+  background: var(--surface-raised);
 }
 .account-menu p {
   overflow-wrap: anywhere;
@@ -731,12 +792,32 @@ details > summary {
   min-width: 0;
 }
 .trip-cards button {
+  justify-content: flex-start;
   text-align: start;
   width: 100%;
   min-height: 56px;
   margin: 0;
   padding-block: 0.125rem;
   line-height: 1.25;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.trip-cards button:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+.trip-cards button[aria-pressed="true"],
+.trip-cards button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--selected-surface);
+  color: var(--selected-text);
+  box-shadow: inset 0 0 0 1px var(--selected-line), inset 4px 0 var(--selected-line);
+}
+.trip-cards button[aria-pressed="true"] strong {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+.trip-cards button:active:not(:disabled) {
+  background: var(--selected-surface);
 }
 .trip-cards .app-button__label > strong,
 .trip-cards .app-button__label > span {
@@ -748,6 +829,7 @@ details > summary {
 }
 .trip-workspace > p {
   margin-block: 0;
+  color: var(--muted);
 }
 @media (min-width: 561px) {
   .trip-workspace {
@@ -947,31 +1029,40 @@ button.plan-icon-button {
 /* Dark theme: muted charcoal, warm paper surfaces, and moss actions. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  color: #e8e7df;
-  background: #1d211d;
-  --ink: #e8e7df;
-  --muted: #b0b3a8;
-  --paper: #282d27;
-  --moss: #718565;
-  --moss-dark: #819574;
+  --ink: #f1f0e8;
+  --muted: #bac0b3;
+  --paper: #282e28;
+  --moss: #9caf8c;
+  --moss-dark: #b2c39e;
   --terra: #cf8064;
-  --line: #454a40;
+  --line: #50594d;
   --page: #1d211d;
   --surface-raised: #30362e;
   --surface-soft: #30372f;
   --surface-inset: #222720;
   --field: #222720;
-  --field-border: #62685b;
+  --field-border: #8d9586;
+  --link: #c2d4b2;
+  --control-text: #172415;
+  --control-pressed: #8c9e7d;
+  --selected-surface: #354533;
+  --selected-text: #e2eed8;
+  --selected-line: #9cb48f;
+  --focus: #f6ad92;
   --alert: #f0a293;
-  --warning-text: #e8c7a0;
+  --success-surface: #303e2e;
+  --success-text: #d8ebcf;
+  --warning-surface: #40352a;
+  --warning-text: #f0d5b6;
+  --danger-surface: #322724;
+  --contact-surface: #3b302a;
+  --contact-line: #896558;
+  --day-heading: #f0b29a;
 }
 
 :root[data-theme="dark"] body {
   color: var(--ink);
   background: var(--page);
-}
-:root[data-theme="dark"] header {
-  background: rgb(29 33 29 / 94%);
 }
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] textarea,
@@ -985,41 +1076,15 @@ button.plan-icon-button {
   color: #999d91;
   opacity: 1;
 }
-:root[data-theme="dark"] a {
-  color: #b3c5a4;
-}
-:root[data-theme="dark"] [role="alert"] {
-  color: var(--alert);
-}
-:root[data-theme="dark"] .activity-tabs button[aria-current="page"] {
-  color: var(--page);
-}
-:root[data-theme="dark"] .next-stop,
-:root[data-theme="dark"] .notice {
-  background: #354034;
-}
 :root[data-theme="dark"] .tonight-card {
   background: #38352c;
 }
-:root[data-theme="dark"] .pending {
-  background: #40352a;
-  color: var(--warning-text);
-}
-:root[data-theme="dark"] .help-card,
 :root[data-theme="dark"] .senior .help-card {
-  background: #3b302a;
-  border-color: #755144;
+  background: var(--contact-surface);
+  border-color: var(--contact-line);
 }
 :root[data-theme="dark"] .danger-zone {
-  background: #322724;
   border-color: #805345;
-}
-:root[data-theme="dark"] .danger-zone summary,
-:root[data-theme="dark"] .danger-button {
-  color: #f4d8cf;
-}
-:root[data-theme="dark"] .danger-button {
-  background: #863f34;
 }
 :root[data-theme="dark"] .plan-form,
 :root[data-theme="dark"] .expense-entry,
@@ -1029,7 +1094,7 @@ button.plan-icon-button {
   background: var(--surface-inset);
 }
 :root[data-theme="dark"] .plan-night h4 {
-  color: #b3c5a4;
+  color: var(--link);
 }
 :root[data-theme="dark"] .plan-icon-button:hover:not(:disabled) {
   background: #3a4037;
@@ -1038,19 +1103,6 @@ button.plan-icon-button {
 :root[data-theme="dark"] .plan-icon-button.danger:hover:not(:disabled) {
   background: #482f2b;
   color: #f0a293;
-}
-:root[data-theme="dark"] .checkin {
-  background: #b66a50;
-}
-:root[data-theme="dark"] .checkin:hover:not(:disabled) {
-  background: #c47a60;
-}
-:root[data-theme="dark"] button:focus-visible,
-:root[data-theme="dark"] a:focus-visible,
-:root[data-theme="dark"] input:focus-visible,
-:root[data-theme="dark"] textarea:focus-visible,
-:root[data-theme="dark"] select:focus-visible {
-  outline-color: #d79a7e;
 }
 :root[data-theme="dark"] img[alt*="QR"] {
   background: #fff;
@@ -1071,7 +1123,7 @@ button.account-toggle {
   height: 44px;
   padding: 0;
   margin: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-border);
   border-radius: 12px;
   background: var(--paper);
   color: var(--ink);
@@ -1081,15 +1133,18 @@ button.account-toggle {
   width: 21px;
   height: 21px;
 }
-.theme-toggle:hover:not(:disabled),
-.account-toggle:hover:not(:disabled) {
-  background: var(--surface-raised, #eeeae1);
+button.theme-toggle:hover:not(:disabled),
+button.account-toggle:hover:not(:disabled) {
+  background: var(--surface-soft);
   color: var(--ink);
   transform: none;
 }
-:root[data-theme="dark"] .theme-toggle,
-:root[data-theme="dark"] .account-toggle {
-  background: var(--surface-raised);
+button.theme-toggle:active:not(:disabled),
+button.account-toggle:active:not(:disabled),
+button.account-toggle[aria-expanded="true"] {
+  background: var(--selected-surface);
+  color: var(--selected-text);
+  box-shadow: inset 0 0 0 1px var(--selected-line);
 }
 @media (max-width: 560px) {
   header {
@@ -1110,7 +1165,7 @@ button.account-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   vertical-align: middle;
 }
 .app-button__label {
@@ -1129,19 +1184,31 @@ button.account-toggle {
 .app-button--secondary {
   background: var(--paper);
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-border);
 }
 .app-button--tertiary {
   background: transparent;
   color: var(--ink);
 }
+.app-button--secondary:is(:hover, :active):not(:disabled),
+.app-button--tertiary:is(:hover, :active):not(:disabled) {
+  background: var(--surface-soft);
+}
 .app-button--error {
-  background: #a73c34;
-  color: white;
+  background: var(--danger-button);
+  color: var(--danger-text);
 }
 .app-button--warning {
-  background: #ead3a5;
-  color: #302819;
+  background: var(--warning-surface);
+  color: var(--warning-text);
+}
+.app-button--error:is(:hover, :active):not(:disabled),
+.danger-button:is(:hover, :active):not(:disabled) {
+  background: var(--danger-hover);
+}
+.app-button--warning:is(:hover, :active):not(:disabled) {
+  filter: brightness(0.94);
+  background: var(--warning-surface);
 }
 .app-button--full-width {
   width: 100%;
@@ -1211,7 +1278,7 @@ button.account-toggle {
   box-shadow: 0 0 0 1px var(--moss-dark);
 }
 .theme-choice-option:focus-within {
-  outline: 2px solid var(--terra);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 .theme-choice-option input {
@@ -1315,8 +1382,11 @@ button.account-toggle {
   padding: 0.4rem 0.75rem;
 }
 .plan-view-toggle button[aria-current="page"],
-.plan-view-toggle button[aria-pressed="true"] {
-  box-shadow: inset 0 -3px 0 var(--terra);
+.plan-view-toggle button[aria-pressed="true"],
+.plan-view-toggle button[aria-pressed="true"]:is(:hover, :active):not(:disabled) {
+  background: var(--selected-surface);
+  color: var(--selected-text);
+  box-shadow: inset 0 0 0 1px var(--selected-line);
 }
 .plan-daily-stay {
   margin: 0.6rem 0;
@@ -1619,14 +1689,6 @@ button.overflow-trigger {
     min-height: 48px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  button.itinerary-fab,
-  .overflow-trigger,
-  .overflow-panel button {
-    transition: none;
-  }
-}
-
 /* Keep floating actions anchored above their trigger, inside the viewport. */
 .plan-organizer-actions {
   position: fixed;
@@ -1697,16 +1759,12 @@ button.itinerary-fab {
   color: var(--ink);
 }
 .plan-night .plan-day-heading .plan-day-number {
-  color: #93462f;
+  color: var(--day-heading);
   font-weight: 700;
 }
 .plan-night .plan-day-heading time {
-  color: #93462f;
+  color: var(--day-heading);
   font-weight: 700;
-}
-:root[data-theme="dark"] .plan-night .plan-day-heading .plan-day-number,
-:root[data-theme="dark"] .plan-night .plan-day-heading time {
-  color: #e3a28b;
 }
 @media (max-width: 560px) {
   .plan-night .plan-day-heading.plan-day-summary {
@@ -1799,3 +1857,12 @@ button.itinerary-fab {
 :root[data-theme="dark"] .activity-tag[data-tag="shopping"] { --tag-color: #e7adf5; }
 :root[data-theme="dark"] .activity-tag[data-tag="sightseeing"] { --tag-color: #a4dbb8; }
 :root[data-theme="dark"] .activity-tag[data-tag="must-go"] { --tag-color: #ffaabb; }
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}

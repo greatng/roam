@@ -6,6 +6,15 @@ type IconButtonProps = Omit<ButtonProps, "svgOnly" | "children"> & {
   children: ComponentChildren;
 };
 
-export function IconButton({ type = "button", ...props }: IconButtonProps) {
-  return <Button {...props} type={type} svgOnly />;
+export function IconButton({
+  type = "button",
+  loading,
+  children,
+  ...props
+}: IconButtonProps) {
+  return (
+    <Button {...props} type={type} loading={loading} svgOnly>
+      {!loading && children}
+    </Button>
+  );
 }

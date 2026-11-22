@@ -1776,8 +1776,28 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
   await plan.getByLabel("Activity tag").selectOption("sightseeing");
   await plan.getByLabel("Address").last().fill("Mueang Chiang Mai");
   await plan.getByLabel("Travel mode into activity").selectOption("taxi");
-  await plan.getByRole("button", { name: "Save activity" }).click();
-  await expect(plan.getByText("Activity saved.")).toBeVisible();
+  let releaseSave = () => {};
+  const pendingSave = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  await page.route(
+    "**/rest/v1/rpc/upsert_tagged_itinerary_item*",
+    async (route) => {
+      await pendingSave;
+      await route.fallback();
+    },
+    { times: 1 },
+  );
+  const save = plan.getByRole("button", { name: "Save activity" });
+  try {
+    await save.click();
+    await expect(save).toHaveAttribute("aria-busy", "true");
+    await expect(save).toBeDisabled();
+  } finally {
+    releaseSave();
+  }
+  const saved = plan.getByRole("status").filter({ hasText: "Activity saved." });
+  await expect(saved.locator('svg[aria-hidden="true"]')).toBeVisible();
   await expect
     .poll(
       () =>
@@ -3691,6 +3711,9 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
       await page.getByRole("button", { name: "Switch to dark mode" }).click();
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(
+      nav.locator('button[aria-current="page"] .app-button__label'),
+    ).toHaveCSS("text-decoration-line", "underline");
     expect(
       await nav.evaluate((row) => {
         const buttons = Array.from(row.querySelectorAll("button"));
@@ -3727,7 +3750,12 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
       path: testInfo.outputPath(`trip-navigation-${theme}.png`),
       animations: "disabled",
     });
-    await nav.getByRole("button", { name: "Itinerary", exact: true }).click();
+    const itineraryTab = nav.getByRole("button", {
+      name: "Itinerary",
+      exact: true,
+    });
+    if (narrow) await itineraryTab.tap();
+    else await itineraryTab.click();
     const itinerary = page.getByRole("region", { name: "Trip itinerary" });
     const viewToggle = itinerary.getByRole("navigation", {
       name: "Itinerary view",

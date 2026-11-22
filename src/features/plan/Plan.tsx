@@ -8,6 +8,7 @@ import { ItineraryExport } from "./ItineraryExport";
 import { PlanEditorActions } from "./PlanEditorActions";
 import { TransportSelect, transportLabel } from "./TransportSelect";
 import type { PdfDay, PdfLine } from "./itinerary-pdf";
+import { ActionIcon } from "../../shared/ActionIcon";
 import { Button } from "../../shared/ui/Button";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
@@ -90,7 +91,13 @@ export function Plan({
   const locale = thai ? "th-TH" : "en";
   const destinationTimezone = trip.timezone;
   const qc = useQueryClient();
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{
+    text: string;
+    success: boolean;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const showNotice = (text: string, success = false) =>
+    setNotice({ text, success });
   const [replaceRange, setReplaceRange] = useState(false);
   const [nightForm, setNightForm] = useState<Night | null>(null);
   const [stayForm, setStayForm] = useState<Stay | null>(
@@ -206,7 +213,9 @@ export function Plan({
   };
   async function saveNights(e: Event) {
     e.preventDefault();
-    setNotice("");
+    if (saving) return;
+    setSaving(true);
+    setNotice(null);
     const f = new FormData(e.currentTarget as HTMLFormElement);
     try {
       const dates = expandDateRange(String(f.get("from")), String(f.get("to")));
@@ -241,12 +250,13 @@ export function Plan({
       setNightForm(null);
       setReplaceRange(false);
       setShowNightEditor(false);
-      setNotice(
+      showNotice(
         t("Destination nights saved.", "บันทึกเมืองสำหรับคืนที่เลือกแล้ว"),
+        true,
       );
       await refresh();
     } catch (error) {
-      setNotice(
+      showNotice(
         (error as { code?: string }).code === "40001"
           ? replaceRange || nightForm
             ? t(
@@ -259,6 +269,8 @@ export function Plan({
               )
           : errorMessage(error),
       );
+    } finally {
+      setSaving(false);
     }
   }
   async function deleteNight(night: Night) {
@@ -267,7 +279,7 @@ export function Plan({
       p_night_date: night.night_date,
       p_expected_version: night.version,
     });
-    setNotice(
+    showNotice(
       error
         ? error.code === "40001"
           ? t(
@@ -276,12 +288,15 @@ export function Plan({
             )
           : error.message
         : t("Night removed.", "ลบเมืองที่บันทึกไว้สำหรับคืนนี้แล้ว"),
+      !error,
     );
     if (!error) await refresh();
   }
   async function saveStay(e: Event) {
     e.preventDefault();
-    setNotice("");
+    if (saving) return;
+    setSaving(true);
+    setNotice(null);
     const f = new FormData(e.currentTarget as HTMLFormElement);
     const from = String(f.get("from"));
     const to = String(f.get("to"));
@@ -310,10 +325,10 @@ export function Plan({
       if (error) throw error;
       setStayForm(null);
       setShowStayEditor(false);
-      setNotice(t("Accommodation saved.", "บันทึกที่พักแล้ว"));
+      showNotice(t("Accommodation saved.", "บันทึกที่พักแล้ว"), true);
       await refresh();
     } catch (error) {
-      setNotice(
+      showNotice(
         (error as { code?: string }).code === "40001"
           ? t(
               "This accommodation changed elsewhere. Refresh and review it.",
@@ -321,6 +336,8 @@ export function Plan({
             )
           : errorMessage(error),
       );
+    } finally {
+      setSaving(false);
     }
   }
   async function deleteStay(stay: Stay) {
@@ -329,7 +346,7 @@ export function Plan({
       p_stay_id: stay.id,
       p_expected_version: stay.version,
     });
-    setNotice(
+    showNotice(
       error
         ? error.code === "40001"
           ? t(
@@ -338,12 +355,15 @@ export function Plan({
             )
           : error.message
         : t("Accommodation removed.", "ลบที่พักแล้ว"),
+      !error,
     );
     if (!error) await refresh();
   }
   async function saveActivity(e: Event) {
     e.preventDefault();
-    setNotice("");
+    if (saving) return;
+    setSaving(true);
+    setNotice(null);
     const f = new FormData(e.currentTarget as HTMLFormElement);
     const raw = String(f.get("starts"));
     try {
@@ -379,10 +399,10 @@ export function Plan({
       if (error) throw error;
       setActivityForm(null);
       setShowActivityEditor(false);
-      setNotice(t("Activity saved.", "บันทึกกิจกรรมแล้ว"));
+      showNotice(t("Activity saved.", "บันทึกกิจกรรมแล้ว"), true);
       await refresh();
     } catch (error) {
-      setNotice(
+      showNotice(
         (error as { code?: string }).code === "40001"
           ? t(
               "This activity changed elsewhere. Refresh and review it.",
@@ -390,6 +410,8 @@ export function Plan({
             )
           : errorMessage(error),
       );
+    } finally {
+      setSaving(false);
     }
   }
   async function deleteActivity(activity: Activity) {
@@ -398,7 +420,7 @@ export function Plan({
       p_item_id: activity.id,
       p_expected_version: activity.version,
     });
-    setNotice(
+    showNotice(
       error
         ? error.code === "40001"
           ? t(
@@ -407,6 +429,7 @@ export function Plan({
             )
           : error.message
         : t("Activity removed.", "ลบกิจกรรมแล้ว"),
+      !error,
     );
     if (!error) await refresh();
   }
@@ -482,7 +505,15 @@ export function Plan({
   return (
     <section class="plan" aria-label={t("Trip itinerary", "แผนการเดินทาง")}>
       <h2>{t("Trip itinerary", "แผนการเดินทาง")}</h2>
-      {notice && <p role="status">{notice}</p>}
+      {notice && (
+        <p
+          role="status"
+          class={notice.success ? "save-confirmation" : undefined}
+        >
+          {notice.success && <ActionIcon kind="save" />}
+          {notice.text}
+        </p>
+      )}
       {(nights.isError || stays.isError || activities.isError) && (
         <p role="status">
           {t(
@@ -816,6 +847,7 @@ export function Plan({
                     )}
                   </label>
                   <PlanEditorActions
+                    saving={saving}
                     saveLabel={
                       nightForm
                         ? t(
@@ -962,6 +994,7 @@ export function Plan({
                     />
                   </label>
                   <PlanEditorActions
+                    saving={saving}
                     saveLabel={t("Save accommodation", "บันทึกที่พัก")}
                     cancelLabel={t("Cancel", "ยกเลิก")}
                     onCancel={() => {
@@ -1104,6 +1137,7 @@ export function Plan({
               thai={thai}
             />
             <PlanEditorActions
+              saving={saving}
               saveLabel={t("Save activity", "บันทึกกิจกรรม")}
               cancelLabel={t("Cancel", "ยกเลิก")}
               onCancel={() => {
