@@ -30,3 +30,11 @@ The official `21st review src` and JSON scan were used with the checked-in desig
 
 - Chromium fixture screenshots cover sign-in and join entry, account, picker, Overview, Itinerary, Accommodation and its editor, Expenses, Preparation and Trip at 320/1280 px in English/Thai and light/dark.
 - Interaction coverage checks keyboard opening and movement in the organizer and record menus, Escape focus restoration, outside dismissal, reduced motion, editor saves and cancellation, icon touch targets, and receipt previews.
+
+## Interaction and visual direction
+
+The approved direction keeps the density and navigation of a field guide. Three alternatives were considered through the [21st Explore workflow](https://github.com/21st-dev/skill/blob/main/skills/21st-ui-explore/SKILL.md): a spacious editorial layout would give headings and cards more room, a desktop split view would keep navigation beside the itinerary, and a compact field guide keeps the itinerary directly below the selected trip and makes its states easier to scan. The field-guide direction fits the small-screen scroll budget and avoids a second navigation model. The decision is recorded in the project design context.
+
+Light and dark CSS share semantic layers for page, paper, raised and inset surfaces, secondary text, control colors, selection, focus and statuses. Underlines and an inset mark distinguish the selected tab, itinerary view and trip card. Itinerary saves expose a named busy button and announce success with a check shape and localized text. Short press and hover changes respect the reduced-motion preference.
+
+The contrast regression tests cover the redesigned foregrounds, control surfaces and state indicators in both themes. They use the [WCAG AA text threshold](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) of 4.5:1 and the [non-text threshold](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html) of 3:1 for paired colors used to identify fields, focus and selection. Browser coverage checks touch target size, a real tap in the mobile Chromium project, the underline cue, and in-flight save and success states.
