@@ -682,19 +682,23 @@ details > summary {
 }
 
 /* PaiKan: one calm workspace, discoverable account and trip controls. */
-.account-menu {
-  margin: 0;
-  position: relative;
-}
-.account-menu > summary {
-  min-height: 48px;
+.header-actions {
   display: flex;
   align-items: center;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
+  gap: 0.35rem;
 }
-.account-menu[open] {
-  max-width: min(32rem, 95vw);
+.account-control {
+  position: relative;
+}
+.account-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 0.5rem);
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  margin: 0;
+  background: var(--paper);
 }
 .account-menu p {
   overflow-wrap: anywhere;
@@ -716,6 +720,11 @@ details > summary {
   text-align: start;
   width: 100%;
   min-height: 72px;
+}
+.trip-cards .app-button__label > strong,
+.trip-cards .app-button__label > span {
+  display: block;
+  overflow-wrap: anywhere;
 }
 .activity-tabs button {
   min-height: 48px;
@@ -1020,7 +1029,8 @@ button.plan-icon-button {
 
 /* Header theme control stays compact alongside the language control. */
 .theme-toggle,
-button.theme-toggle {
+button.theme-toggle,
+button.account-toggle {
   display: inline-grid;
   place-items: center;
   flex: 0 0 44px;
@@ -1035,16 +1045,19 @@ button.theme-toggle {
   background: var(--paper);
   color: var(--ink);
 }
-.theme-toggle svg {
+.theme-toggle svg,
+.account-toggle svg {
   width: 21px;
   height: 21px;
 }
-.theme-toggle:hover:not(:disabled) {
+.theme-toggle:hover:not(:disabled),
+.account-toggle:hover:not(:disabled) {
   background: var(--surface-raised, #eeeae1);
   color: var(--ink);
   transform: none;
 }
-:root[data-theme="dark"] .theme-toggle {
+:root[data-theme="dark"] .theme-toggle,
+:root[data-theme="dark"] .account-toggle {
   background: var(--surface-raised);
 }
 @media (max-width: 560px) {
@@ -1052,7 +1065,8 @@ button.theme-toggle {
     gap: 0.35rem;
   }
 }
-.theme-toggle svg {
+.theme-toggle svg,
+.account-toggle svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -1722,3 +1736,24 @@ button.itinerary-fab {
   background: transparent;
   box-shadow: none;
 }
+
+.activity-tag {
+  display: inline-block;
+  border: 1px solid var(--tag-color, currentColor);
+  border-radius: 0.35rem;
+  padding: 0.08rem 0.4rem;
+  color: var(--tag-color, currentColor);
+  font-size: 0.78rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.activity-tag[data-tag="transport"] { --tag-color: #255e95; }
+.activity-tag[data-tag="food"] { --tag-color: #8b420f; }
+.activity-tag[data-tag="shopping"] { --tag-color: #7a3989; }
+.activity-tag[data-tag="sightseeing"] { --tag-color: #295e41; }
+.activity-tag[data-tag="must-go"] { --tag-color: #a02d42; }
+:root[data-theme="dark"] .activity-tag[data-tag="transport"] { --tag-color: #9ecbff; }
+:root[data-theme="dark"] .activity-tag[data-tag="food"] { --tag-color: #ffc28e; }
+:root[data-theme="dark"] .activity-tag[data-tag="shopping"] { --tag-color: #e7adf5; }
+:root[data-theme="dark"] .activity-tag[data-tag="sightseeing"] { --tag-color: #a4dbb8; }
+:root[data-theme="dark"] .activity-tag[data-tag="must-go"] { --tag-color: #ffaabb; }

@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Locator } from "@playwright/test";
 import sharp from "sharp";
 
@@ -55,6 +56,7 @@ type FixtureRpcArgs = {
   p_member_id?: string;
   p_can_edit?: boolean;
   p_item_id?: string;
+  p_activity_tag?: string | null;
 };
 
 async function installFixture(
@@ -508,7 +510,7 @@ async function installFixture(
       return;
     }
     let result: unknown = null;
-    if (fn === "upsert_itinerary_item") {
+    if (fn === "upsert_tagged_itinerary_item") {
       const prior = args.p_item_id
         ? itinerary.find((candidate) => candidate.id === args.p_item_id)
         : undefined;
@@ -521,6 +523,7 @@ async function installFixture(
         address: args.p_address,
         meeting_info: args.p_meeting_info,
         notes: args.p_notes,
+        activity_tag: args.p_activity_tag,
         transport_mode: args.p_transport_mode,
         position: args.p_position,
         version: Number(prior?.version ?? 0) + 1,
@@ -1010,6 +1013,7 @@ test("refresh keeps the chosen tab even when an expense draft exists", async ({
   await nav().getByRole("button", { name: "Expenses", exact: true }).click();
   const form = page.locator(".expense-entry");
   await form.locator(":scope > summary").click();
+  await expect(form.locator("form")).toBeFocused();
   await form.getByLabel("What was it for?").fill("Keep this draft");
   await form.getByLabel("Amount (THB)").fill("320");
   // Opening the file picker waits until the draft is durable.
@@ -1023,11 +1027,16 @@ test("refresh keeps the chosen tab even when an expense draft exists", async ({
       nav().getByRole("button", { name: tab, exact: true }),
     ).toHaveAttribute("aria-current", "page");
   }
-  await nav().getByRole("button", { name: "Expenses", exact: true }).click();
+  const expenseTab = nav().getByRole("button", {
+    name: "Expenses",
+    exact: true,
+  });
+  await expenseTab.press("Enter");
   await expect(form.getByLabel("What was it for?")).toHaveValue(
     "Keep this draft",
   );
   await expect(form.getByLabel("Amount (THB)")).toHaveValue("320");
+  await expect(expenseTab).toBeFocused();
 });
 
 test("restores an unsaved expense after file picker interruption and reload", async ({
@@ -1572,7 +1581,7 @@ test("mocked enrolled itinerary and expense flow; keyboard and labels; preview c
       () =>
         fixtureState
           .getRpcCalls()
-          .find((call) => call.fn === "upsert_itinerary_item")?.args,
+          .find((call) => call.fn === "upsert_tagged_itinerary_item")?.args,
     )
     .toMatchObject({
       p_title: "Lunch at Or Tor Kor",
@@ -1762,6 +1771,7 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
     .getByRole("textbox", { name: "Activity", exact: true })
     .fill("Doi Suthep visit");
   await plan.getByLabel("Activity time").fill("09:30");
+  await plan.getByLabel("Activity tag").selectOption("sightseeing");
   await plan.getByLabel("Address").last().fill("Mueang Chiang Mai");
   await plan.getByLabel("Travel mode into activity").selectOption("taxi");
   await plan.getByRole("button", { name: "Save activity" }).click();
@@ -1773,7 +1783,7 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
           .getRpcCalls()
           .find(
             (call) =>
-              call.fn === "upsert_itinerary_item" &&
+              call.fn === "upsert_tagged_itinerary_item" &&
               call.args.p_title === "Doi Suthep visit",
           )?.args,
     )
@@ -1782,6 +1792,7 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
       p_starts_at: "2026-11-02T02:30:00.000Z",
       p_transport_mode: "taxi",
       p_title: "Doi Suthep visit",
+      p_activity_tag: "sightseeing",
     });
   await expect(
     plan.getByText("Doi Suthep visit", { exact: true }),
@@ -1790,6 +1801,9 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
     .locator(".plan-activity")
     .filter({ hasText: "Doi Suthep visit" });
   await expect(createdActivity).toContainText(/9:30/);
+  await expect(
+    createdActivity.getByText("Sightseeing", { exact: true }),
+  ).toBeVisible();
   await expect(
     createdActivity.getByRole("button", {
       name: "Options for Doi Suthep visit",
@@ -1813,6 +1827,16 @@ test("trip plan saves inclusive night ranges, accommodation, and a timezone-awar
   await expect(createdActivityEditor.getByLabel("Activity time")).toHaveValue(
     "09:30",
   );
+  await expect(createdActivityEditor.getByLabel("Activity tag")).toHaveValue(
+    "sightseeing",
+  );
+  await createdActivityEditor.getByLabel("Activity tag").selectOption("");
+  await createdActivityEditor
+    .getByRole("button", { name: "Save activity" })
+    .click();
+  await expect(
+    createdActivity.getByText("Sightseeing", { exact: true }),
+  ).toHaveCount(0);
 });
 
 test.describe("Plan editor regressions", () => {
@@ -2009,7 +2033,7 @@ test.describe("Browser timezone differs from trip timezone", () => {
         () =>
           fixtureState
             .getRpcCalls()
-            .filter((call) => call.fn === "upsert_itinerary_item")
+            .filter((call) => call.fn === "upsert_tagged_itinerary_item")
             .at(-1)?.args,
       )
       .toMatchObject({
@@ -2036,7 +2060,7 @@ test.describe("Browser timezone differs from trip timezone", () => {
         () =>
           fixtureState
             .getRpcCalls()
-            .filter((call) => call.fn === "upsert_itinerary_item")
+            .filter((call) => call.fn === "upsert_tagged_itinerary_item")
             .at(-1)?.args,
       )
       .toMatchObject({
@@ -2065,7 +2089,7 @@ test.describe("Browser timezone differs from trip timezone", () => {
         () =>
           fixtureState
             .getRpcCalls()
-            .filter((call) => call.fn === "upsert_itinerary_item")
+            .filter((call) => call.fn === "upsert_tagged_itinerary_item")
             .at(-1)?.args,
       )
       .toMatchObject({
@@ -2091,7 +2115,7 @@ test.describe("Browser timezone differs from trip timezone", () => {
         () =>
           fixtureState
             .getRpcCalls()
-            .filter((call) => call.fn === "upsert_itinerary_item")
+            .filter((call) => call.fn === "upsert_tagged_itinerary_item")
             .at(-1)?.args,
       )
       .toMatchObject({
@@ -2690,7 +2714,7 @@ test("guest account warns before sign-out and can stay signed in", async ({
 test("email account confirms sign-out of this device", async ({ page }) => {
   await installFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "fixture@example.test" }).click();
+  await page.getByRole("button", { name: "Account", exact: true }).click();
   await page.getByRole("button", { name: "Sign out of this device" }).click();
   const warning = page.getByRole("alert", { name: "Confirm sign out" });
   await expect(warning).toContainText("sign in again with your email");
@@ -3116,7 +3140,7 @@ test.describe("Daily itinerary browser regressions", () => {
         () =>
           fixture
             .getRpcCalls()
-            .find((call) => call.fn === "upsert_itinerary_item")?.args,
+            .find((call) => call.fn === "upsert_tagged_itinerary_item")?.args,
       )
       .toMatchObject({
         p_item_id: "stop-1",
@@ -3320,7 +3344,7 @@ test("account Appearance offers Light, Dark, and System and follows the OS", asy
   await page.emulateMedia({ colorScheme: "light" });
   await installFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "fixture@example.test" }).click();
+  await page.getByRole("button", { name: "Account", exact: true }).click();
 
   const appearance = page.getByRole("group", { name: "Appearance" });
   await expect(appearance).toBeVisible();
@@ -3593,7 +3617,14 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 650 });
   await installFixture(page);
   await page.goto("/");
-  await openTrip(page);
+  const card = await openTrip(page);
+  const title = await card
+    .getByText("Bangkok Weekend", { exact: true })
+    .boundingBox();
+  const dates = await card
+    .getByText("2026-11-01 — 2026-11-04", { exact: true })
+    .boundingBox();
+  expect(dates!.y).toBeGreaterThanOrEqual(title!.y + title!.height);
   const nav = page.getByRole("navigation", { name: "Trip sections" });
   const buttons = nav.getByRole("button");
   await expect(buttons).toHaveText([
@@ -3631,4 +3662,142 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
   await expect
     .poll(() => nav.evaluate((row) => row.scrollLeft))
     .toBeGreaterThan(0);
+});
+
+test("header account icon opens the email panel and fits a narrow viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 650 });
+  await installFixture(page);
+  await page.goto("/");
+  const header = page.getByRole("banner");
+  const account = header.getByRole("button", { name: "Account", exact: true });
+  await expect(account.locator("svg")).toBeVisible();
+  await expect(
+    page.getByText("fixture@example.test", { exact: true }),
+  ).toHaveCount(0);
+  await header.locator(".theme-toggle").focus();
+  await page.keyboard.press("Tab");
+  await expect(account).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    header.getByText("fixture@example.test", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  await page.keyboard.press("Escape");
+  await expect(account).toHaveAttribute("aria-expanded", "false");
+  await expect(account).toBeFocused();
+});
+
+test("organizer can add the first stop to a selected free day from Overview", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-11-02T03:00:00.000Z"));
+  const fixture = await installFixture(page, { daily: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "Next day" }).click();
+  await expect(page.getByText("Free day", { exact: false })).toBeVisible();
+  const editor = page.locator(".stop-editor");
+  await editor.locator("summary").click();
+  await expect(editor.getByLabel("Day")).toHaveValue("2026-11-03");
+  await editor.getByLabel("Place or activity").fill("Coffee in Chiang Mai");
+  await editor.getByLabel("Activity tag").selectOption("food");
+  await editor.getByRole("button", { name: "Save stop" }).click();
+  await expect(
+    page.locator("article.stop").filter({ hasText: "Coffee in Chiang Mai" }),
+  ).toBeVisible();
+  await expect(page.getByText("Free day", { exact: false })).toHaveCount(0);
+  await expect(
+    page
+      .locator("article.stop")
+      .filter({ hasText: "Coffee in Chiang Mai" })
+      .getByText("Food", { exact: true }),
+  ).toBeVisible();
+  expect(
+    fixture
+      .getRpcCalls()
+      .find((call) => call.fn === "upsert_tagged_itinerary_item")?.args,
+  ).toMatchObject({
+    p_plan_date: "2026-11-03",
+    p_item_id: null,
+    p_activity_tag: "food",
+  });
+});
+
+test("full itinerary PDF can be downloaded and shared as an attachment", async ({
+  page,
+}, testInfo) => {
+  await installFixture(page, { daily: true });
+  await page.route("**/rest/v1/itinerary_items?*", async (route) => {
+    const url = new URL(route.request().url());
+    if (!url.searchParams.has("plan_date")) return route.fallback();
+    await route.fulfill({
+      json: [
+        {
+          id: "export-stop",
+          trip_id: tripId,
+          plan_date: "2026-11-02",
+          starts_at: "2026-11-02T02:00:00Z",
+          title: "Wat Arun · วัดอรุณ",
+          activity_tag: "sightseeing",
+          notes: Array.from(
+            { length: 32 },
+            (_, i) => `Packing detail ${i + 1} · เตรียมหนังสือเดินทาง`,
+          ).join("\n"),
+          position: 1,
+          version: 1,
+        },
+      ],
+    });
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "canShare", {
+      value: (data: ShareData) => data.files?.[0]?.type === "application/pdf",
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "share", {
+      value: async (data: ShareData) => {
+        document.body.dataset.sharedFile = data.files?.[0]?.name ?? "";
+      },
+      configurable: true,
+    });
+  });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "Itinerary", exact: true }).click();
+  const thai = !!testInfo.project.use.hasTouch;
+  if (thai) await page.getByRole("button", { name: "ไทย / English" }).click();
+  await page
+    .getByText(
+      thai ? "ส่งออกแผนการเดินทางเป็น PDF" : "Export itinerary as PDF",
+      { exact: true },
+    )
+    .click();
+  await page
+    .getByRole("button", {
+      name: thai ? "สร้าง PDF" : "Create PDF",
+      exact: true,
+    })
+    .click();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: thai ? "ดาวน์โหลด PDF" : "Download PDF" })
+    .click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("Bangkok Weekend.pdf");
+  const output = testInfo.outputPath("itinerary.pdf");
+  await file.saveAs(output);
+  const bytes = (await readFile(output)).toString("latin1");
+  expect(bytes).toMatch(/^%PDF-/);
+  expect(bytes.match(/\/Type \/Page\b/g)?.length).toBeGreaterThan(1);
+  await page
+    .getByRole("button", { name: thai ? "แชร์ PDF" : "Share PDF" })
+    .click();
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-shared-file",
+    file.suggestedFilename(),
+  );
 });

@@ -74,6 +74,36 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutWarning, setSignOutWarning] = useState(false);
+  const accountControl = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    function close() {
+      setAccountOpen(false);
+      setSignOutWarning(false);
+    }
+    function onEscape(event: KeyboardEvent) {
+      if (
+        event.key !== "Escape" ||
+        !accountControl.current?.contains(document.activeElement)
+      )
+        return;
+      close();
+      accountControl.current.querySelector("button")?.focus();
+    }
+    function onOutside(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !accountControl.current?.contains(event.target)
+      )
+        close();
+    }
+    document.addEventListener("keydown", onEscape);
+    document.addEventListener("pointerdown", onOutside);
+    return () => {
+      document.removeEventListener("keydown", onEscape);
+      document.removeEventListener("pointerdown", onOutside);
+    };
+  }, [accountOpen]);
   const [pendingCount, setPendingCount] = useState(0);
   useEffect(() => {
     if (qr) revealEditor(qrPanel.current);
@@ -258,86 +288,111 @@ export function App() {
         >
           ไทย / English
         </Button>
-        <ThemeToggle thai={thai.value} />
+        <div class="header-actions">
+          <ThemeToggle thai={thai.value} />
+          {uid && (
+            <div class="account-control" ref={accountControl}>
+              <Button
+                class="account-toggle"
+                type="button"
+                svgOnly
+                aria-label={
+                  user?.is_anonymous
+                    ? t("Guest account", "บัญชีผู้เยี่ยมชม")
+                    : t("Account", "บัญชี")
+                }
+                aria-expanded={accountOpen}
+                aria-controls={accountOpen ? "account-panel" : undefined}
+                onClick={() => {
+                  setAccountOpen(!accountOpen);
+                  setSignOutWarning(false);
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                >
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
+                </svg>
+              </Button>
+              {accountOpen && (
+                <section
+                  id="account-panel"
+                  class="account-menu"
+                  aria-label={t("Account", "บัญชี")}
+                >
+                  <ThemeChoice thai={thai.value} />
+                  <p>
+                    {user?.is_anonymous
+                      ? t(
+                          "This guest account lives on this device. Verify an email to keep access across devices.",
+                          "บัญชีผู้เยี่ยมชมอยู่ในอุปกรณ์นี้ ยืนยันอีเมลเพื่อเข้าถึงจากอุปกรณ์อื่น",
+                        )
+                      : user?.email}
+                  </p>
+                  {user?.is_anonymous && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        selectTrip(null);
+                        setAccountOpen(false);
+                      }}
+                    >
+                      {t(
+                        "Create my own trips / Verify email",
+                        "สร้างทริปของฉัน / ยืนยันอีเมล",
+                      )}
+                    </Button>
+                  )}
+                  <Button type="button" onClick={() => void prepareSignOut()}>
+                    {t("Sign out of this device", "ออกจากระบบในอุปกรณ์นี้")}
+                  </Button>
+                  {signOutWarning && (
+                    <section
+                      role="alert"
+                      aria-label={t("Confirm sign out", "ยืนยันออกจากระบบ")}
+                    >
+                      <p>
+                        {user?.is_anonymous
+                          ? t(
+                              "Signing out of a guest account can lose access to your trips. Ask your organizer about supervised recovery before continuing.",
+                              "การออกจากบัญชีผู้เยี่ยมชมอาจทำให้เข้าถึงทริปไม่ได้ กรุณาติดต่อผู้จัดเรื่องกู้คืนบัญชีก่อน",
+                            )
+                          : t(
+                              "You can sign in again with your email. Saved trip data will be removed from this device.",
+                              "คุณลงชื่อเข้าใหม่ด้วยอีเมลได้ ข้อมูลทริปที่บันทึกจะถูกลบจากอุปกรณ์นี้",
+                            )}
+                      </p>
+                      {pendingCount > 0 && (
+                        <p>
+                          {t(
+                            `${pendingCount} saved action(s) will be removed from this device. Some may already have reached the server. Reconnect and check the trip before signing out.`,
+                            `มี ${pendingCount} รายการที่บันทึกไว้และจะถูกลบ บางรายการอาจถึงเซิร์ฟเวอร์แล้ว กรุณาเชื่อมต่อและตรวจสอบทริปก่อนออกจากระบบ`,
+                          )}
+                        </p>
+                      )}
+                      <Button disabled={busy} onClick={() => void signOut()}>
+                        {t("Confirm sign out", "ยืนยันออกจากระบบ")}
+                      </Button>
+                      <Button onClick={() => setSignOutWarning(false)}>
+                        {t("Keep signed in", "อยู่ในระบบต่อ")}
+                      </Button>
+                    </section>
+                  )}
+                </section>
+              )}
+            </div>
+          )}
+        </div>
       </header>
       <PwaUpdate thai={thai.value} />
       <main>
-        {uid && (
-          <section class="account-menu" aria-label={t("Account", "บัญชี")}>
-            <Button
-              type="button"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen(!accountOpen)}
-            >
-              {user?.is_anonymous
-                ? t("Guest account", "บัญชีผู้เยี่ยมชม")
-                : (user?.email ?? t("Account", "บัญชี"))}
-            </Button>
-            {accountOpen && (
-              <div>
-                <ThemeChoice thai={thai.value} />
-                <p>
-                  {user?.is_anonymous
-                    ? t(
-                        "This guest account lives on this device. Verify an email to keep access across devices.",
-                        "บัญชีผู้เยี่ยมชมอยู่ในอุปกรณ์นี้ ยืนยันอีเมลเพื่อเข้าถึงจากอุปกรณ์อื่น",
-                      )
-                    : user?.email}
-                </p>
-                {user?.is_anonymous && (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      selectTrip(null);
-                      setAccountOpen(false);
-                    }}
-                  >
-                    {t(
-                      "Create my own trips / Verify email",
-                      "สร้างทริปของฉัน / ยืนยันอีเมล",
-                    )}
-                  </Button>
-                )}
-                <Button type="button" onClick={() => void prepareSignOut()}>
-                  {t("Sign out of this device", "ออกจากระบบในอุปกรณ์นี้")}
-                </Button>
-              </div>
-            )}
-            {signOutWarning && (
-              <section
-                role="alert"
-                aria-label={t("Confirm sign out", "ยืนยันออกจากระบบ")}
-              >
-                <p>
-                  {user?.is_anonymous
-                    ? t(
-                        "Signing out of a guest account can lose access to your trips. Ask your organizer about supervised recovery before continuing.",
-                        "การออกจากบัญชีผู้เยี่ยมชมอาจทำให้เข้าถึงทริปไม่ได้ กรุณาติดต่อผู้จัดเรื่องกู้คืนบัญชีก่อน",
-                      )
-                    : t(
-                        "You can sign in again with your email. Saved trip data will be removed from this device.",
-                        "คุณลงชื่อเข้าใหม่ด้วยอีเมลได้ ข้อมูลทริปที่บันทึกจะถูกลบจากอุปกรณ์นี้",
-                      )}
-                </p>
-                {pendingCount > 0 && (
-                  <p>
-                    {t(
-                      `${pendingCount} saved action(s) will be removed from this device. Some may already have reached the server. Reconnect and check the trip before signing out.`,
-                      `มี ${pendingCount} รายการที่บันทึกไว้และจะถูกลบ บางรายการอาจถึงเซิร์ฟเวอร์แล้ว กรุณาเชื่อมต่อและตรวจสอบทริปก่อนออกจากระบบ`,
-                    )}
-                  </p>
-                )}
-                <Button disabled={busy} onClick={() => void signOut()}>
-                  {t("Confirm sign out", "ยืนยันออกจากระบบ")}
-                </Button>
-                <Button onClick={() => setSignOutWarning(false)}>
-                  {t("Keep signed in", "อยู่ในระบบต่อ")}
-                </Button>
-              </section>
-            )}
-          </section>
-        )}
-
         <h1>{t("Your trips, together.", "เดินทางไปด้วยกัน")}</h1>
         {error && <p role="alert">{error}</p>}
         {(trips.error || members.error || requests.error || invites.error) && (

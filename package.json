@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "@tanstack/preact-query": "^5.105.0",
     "dexie": "^4.4.7",
+    "jspdf": "4.2.1",
     "preact": "^10.29.8",
     "qrcode": "^1.5.4"
   },

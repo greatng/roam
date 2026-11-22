@@ -38,8 +38,21 @@ test("approved signed-in plan editors can write planning data without gaining ad
     await db.query(`select delete_nightly_destination('${trip}','2026-11-01',1)`);
     const stay = (await db.query<{ id: string }>(`select (upsert_stay('${trip}','2026-11-01','2026-11-02','Hotel')).id id`)).rows[0].id;
     await db.query(`select delete_stay('${trip}','${stay}',1)`);
-    const item = (await db.query<{ id: string }>(`select (upsert_itinerary_item(p_trip_id=>'${trip}',p_title=>'Dinner',p_plan_date=>'2026-11-01')).id id`)).rows[0].id;
-    await db.query(`select delete_itinerary_item('${trip}','${item}',1)`);
+    const item = (await db.query<{ id: string; activity_tag: string | null }>(
+      `select id, activity_tag from upsert_tagged_itinerary_item('${trip}', 'Dinner', 'food', p_plan_date=>'2026-11-01')`,
+    )).rows[0];
+    expect(item.activity_tag).toBe("food");
+    await expect(db.query(
+      `select upsert_tagged_itinerary_item('${trip}', 'Bad category', 'invalid', p_item_id=>'${item.id}', p_expected_version=>1)`,
+    )).rejects.toThrow();
+    expect((await db.query(
+      `select title, activity_tag, version from itinerary_items where id='${item.id}'`,
+    )).rows).toEqual([{ title: "Dinner", activity_tag: "food", version: 1 }]);
+    const cleared = await db.query(
+      `select activity_tag, version from upsert_tagged_itinerary_item('${trip}', 'Dinner', null, p_item_id=>'${item.id}', p_expected_version=>1)`,
+    );
+    expect(cleared.rows).toEqual([{ activity_tag: null, version: 2 }]);
+    await db.query(`select delete_itinerary_item('${trip}','${item.id}',2)`);
     await expect(db.query(`select create_invite('${trip}')`)).rejects.toThrow();
     await expect(db.query(`select remove_member('${editorMember}')`)).rejects.toThrow();
     await expect(db.query(`select archive_trip('${trip}')`)).rejects.toThrow(/organizer/i);
@@ -51,7 +64,7 @@ test("approved signed-in plan editors can write planning data without gaining ad
     await expect(db.query(`select set_nightly_destinations('${trip}','2026-11-02','2026-11-02','Revoked')`)).rejects.toThrow(/plan editor/i);
 
     await db.exec(`set request.jwt.claim.sub='${pendingUser}'`);
-    await expect(db.query(`select upsert_itinerary_item(p_trip_id=>'${trip}',p_title=>'Pending')`)).rejects.toThrow(/plan editor/i);
+    await expect(db.query(`select upsert_tagged_itinerary_item('${trip}','Pending','food')`)).rejects.toThrow(/plan editor/i);
     await db.exec(`set request.jwt.claim.sub='${outsider}'`);
     await expect(db.query(`select set_nightly_destinations('${trip}','2026-11-01','2026-11-01','Nope')`)).rejects.toThrow(/plan editor/i);
     await db.exec(`set request.jwt.claim.sub='${otherTripUser}'`);
