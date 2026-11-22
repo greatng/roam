@@ -128,7 +128,7 @@ export function ReceiptDraftPicker({
               setError("");
             }}
           >
-            {tr(thai, "Remove selected receipt", "นำรูปใบเสร็จที่เลือกออก")}
+            {tr(thai, "Remove selected receipt", "เอารูปใบเสร็จที่เลือกออก")}
           </Button>
         </div>
       )}

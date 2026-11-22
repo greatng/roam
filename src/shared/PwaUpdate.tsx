@@ -92,7 +92,7 @@ export function PwaUpdate({ thai }: Props) {
     <aside class="notice pwa-update-notice" role="status" aria-live="polite">
       <span>
         {thai
-          ? "บันทึกการเปลี่ยนแปลงก่อนอัปเดต"
+          ? "บันทึกงานที่ทำค้างอยู่ก่อนอัปเดต"
           : "Save changes before updating"}
       </span>
       <Button

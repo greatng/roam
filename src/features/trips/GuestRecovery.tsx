@@ -57,17 +57,17 @@ export function GuestRecovery({
   );
   return (
     <section class="guest-recovery">
-      <h3>{t("Supervised guest recovery", "กู้คืนผู้เยี่ยมชมโดยผู้จัด")}</h3>
+      <h3>{t("Supervised guest recovery", "กู้คืนสิทธิ์เข้าทริปให้ผู้เยี่ยมชม")}</h3>
       <p>
         {t(
           "Verify the person in person or through a trusted channel first. A matching name or QR invitation is not proof of identity.",
-          "ยืนยันบุคคลต่อหน้าหรือผ่านช่องทางที่เชื่อถือก่อน ชื่อตรงกันหรือคำเชิญ QR ไม่ใช่หลักฐานยืนยันตัวตน",
+          "ยืนยันตัวตนต่อหน้าหรือผ่านช่องทางที่เชื่อถือได้ก่อน ชื่อที่ตรงกันหรือคิวอาร์โค้ดคำเชิญใช้ยืนยันตัวตนไม่ได้",
         )}
       </p>
       {denied.map((r) => (
         <details key={r.id}>
           <summary>
-            {t("Reopen request for", "เปิดคำขออีกครั้งสำหรับ")}{" "}
+            {t("Reopen request for", "เปิดคำขออีกครั้งให้")}{" "}
             {r.requested_display_name}
           </summary>
           <form
@@ -92,7 +92,7 @@ export function GuestRecovery({
                 </option>
                 {validInvites.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {t("New invitation expiring", "คำเชิญใหม่หมดอายุ")}{" "}
+                    {t("New invitation expiring", "คำเชิญใหม่จะหมดอายุวันที่")}{" "}
                     {new Date(i.expires_at).toLocaleString(
                       thai ? "th-TH" : "en",
                     )}
@@ -104,11 +104,11 @@ export function GuestRecovery({
               <input type="checkbox" name="verified" required />
               {t(
                 "I verified this person through a trusted channel.",
-                "ฉันยืนยันบุคคลนี้ผ่านช่องทางที่เชื่อถือแล้ว",
+                "ฉันยืนยันตัวตนของผู้เดินทางผ่านช่องทางที่เชื่อถือได้แล้ว",
               )}
             </label>
             <Button disabled={busy}>
-              {t("Reopen for approval", "เปิดคำขอเพื่อพิจารณาอีกครั้ง")}
+              {t("Reopen for approval", "เปิดคำขอนี้ให้พิจารณาใหม่")}
             </Button>
           </form>
         </details>
@@ -118,13 +118,13 @@ export function GuestRecovery({
           <summary>
             {t(
               "Reconnect a verified traveler to an existing member",
-              "เชื่อมผู้เดินทางที่ยืนยันแล้วกับสมาชิกเดิม",
+              "คืนสิทธิ์ของสมาชิกเดิมให้ผู้เดินทางที่ยืนยันตัวตนแล้ว",
             )}
           </summary>
           <p>
             {t(
               "The selected old member keeps their expenses and history. Access moves to the requesting device; the old device loses this trip.",
-              "สมาชิกเดิมยังคงประวัติค่าใช้จ่ายและเช็กอิน สิทธิ์จะย้ายไปอุปกรณ์ที่ขอ และอุปกรณ์เดิมจะหมดสิทธิ์ในทริปนี้",
+              "ประวัติค่าใช้จ่ายและการเช็กอินจะยังอยู่ ระบบจะย้ายสิทธิ์เข้าทริปจากอุปกรณ์เดิมไปยังอุปกรณ์ที่ส่งคำขอ",
             )}
           </p>
           <form
@@ -150,7 +150,7 @@ export function GuestRecovery({
               </select>
             </label>
             <label>
-              {t("Existing removed member", "สมาชิกเดิมที่ถูกนำออก")}
+              {t("Existing removed member", "สมาชิกที่ถูกนำออกจากทริป")}
               <select name="member" required>
                 <option value="">{t("Choose member", "เลือกสมาชิก")}</option>
                 {removed.map((m) => (
@@ -177,7 +177,7 @@ export function GuestRecovery({
         <p>
           {t(
             "No recovery actions are waiting. If a traveler lost their session, first verify them, remove their old device membership, and ask the new device to request access with a valid invitation. Recover the existing member before approving a new member.",
-            "ไม่มีรายการกู้คืนที่รออยู่ หากผู้เดินทางสูญเสียบัญชี ให้ยืนยันตัวตน นำสิทธิ์อุปกรณ์เดิมออก และให้อุปกรณ์ใหม่ขอเข้าร่วมด้วยคำเชิญที่ใช้ได้ แล้วกู้คืนสมาชิกเดิมก่อนอนุมัติเป็นสมาชิกใหม่",
+            "ไม่มีคำขอกู้คืนที่รอดำเนินการ หากผู้เดินทางเข้าใช้บัญชีเดิมไม่ได้ ให้ยืนยันตัวตนและยกเลิกสิทธิ์ของอุปกรณ์เดิม จากนั้นให้ผู้เดินทางใช้คำเชิญที่ยังใช้ได้เพื่อขอเข้าร่วมจากอุปกรณ์ใหม่ แล้วกู้คืนสิทธิ์ของสมาชิกเดิมก่อนอนุมัติเป็นสมาชิกใหม่",
           )}
         </p>
       )}

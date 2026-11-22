@@ -84,10 +84,10 @@ export function Preparation({
   return (
     <div class="preparation">
       <Checklist
-        title={tr("Trip checklist", "รายการเตรียมตัวของทริป")}
+        title={tr("Trip checklist", "เช็กลิสต์ของทริป")}
         description={tr(
           "Everyone sees these items. Your checkmarks stay on this device.",
-          "ทุกคนเห็นรายการนี้ เครื่องหมายถูกของคุณอยู่บนอุปกรณ์นี้",
+          "ทุกคนในทริปเห็นรายการนี้ ส่วนการติ๊กของคุณจะบันทึกไว้เฉพาะในอุปกรณ์นี้",
         )}
         items={
           shared.isError
@@ -101,7 +101,7 @@ export function Preparation({
           shared.isError
             ? tr(
                 "Could not load the trip checklist.",
-                "โหลดรายการของทริปไม่สำเร็จ",
+                "โหลดเช็กลิสต์ของทริปไม่สำเร็จ",
               )
             : shared.isPending
               ? tr("Loading checklist…", "กำลังโหลดรายการ…")
@@ -120,10 +120,10 @@ export function Preparation({
         thai={thai}
       />
       <Checklist
-        title={tr("My checklist", "รายการของฉัน")}
+        title={tr("My checklist", "เช็กลิสต์ของฉัน")}
         description={tr(
           "Your personal items are saved on this device.",
-          "รายการส่วนตัวของคุณบันทึกบนอุปกรณ์นี้",
+          "เช็กลิสต์ส่วนตัวจะบันทึกไว้ในอุปกรณ์นี้เท่านั้น",
         )}
         items={progress.items}
         toggle={(id, done) =>
@@ -159,7 +159,7 @@ export function Preparation({
         <p role="alert">
           {tr(
             "This device could not save your changes.",
-            "อุปกรณ์นี้บันทึกการเปลี่ยนแปลงไม่ได้",
+            "บันทึกการเปลี่ยนแปลงในอุปกรณ์นี้ไม่ได้",
           )}
         </p>
       )}

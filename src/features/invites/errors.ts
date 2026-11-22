@@ -76,7 +76,7 @@ export async function inviteError(
     safeCode = "INVITE_RATE_LIMIT";
     message = choose(
       "Too many attempts were made. Wait a little and try again.",
-      "มีการลองมากเกินไป กรุณารอสักครู่แล้วลองอีกครั้ง",
+      "ลองหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่",
     );
   } else if (code === "GATEWAY_CONNECTION") {
     safeCode = "INVITE_CONNECTION";
@@ -88,7 +88,7 @@ export async function inviteError(
     safeCode = "INVITE_AUTH";
     message = choose(
       "Your guest session could not be verified. Refresh and try again; contact the organizer if this continues.",
-      "ไม่สามารถยืนยันเซสชันผู้เยี่ยมชมได้ กรุณารีเฟรชแล้วลองอีกครั้ง หากยังมีปัญหาให้ติดต่อผู้จัด",
+      "ยืนยันบัญชีผู้เยี่ยมชมไม่ได้ กรุณารีเฟรชแล้วลองใหม่ หากยังมีปัญหาให้ติดต่อผู้จัดทริป",
     );
   } else if (
     status === 403 ||
@@ -115,7 +115,7 @@ export async function inviteError(
       safeCode = "INVITE_UNKNOWN";
       message = choose(
         "Could not complete the invitation. Check your connection and try again; ask the organizer to check the invite-gateway setup if it continues.",
-        "ดำเนินการคำเชิญไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง หากยังมีปัญหาให้ผู้จัดตรวจสอบการตั้งค่า invite-gateway",
+        "เปิดคำเชิญไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ หากยังมีปัญหาให้ผู้จัดตรวจสอบการตั้งค่า invite-gateway",
       );
     }
   }

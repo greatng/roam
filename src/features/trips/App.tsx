@@ -349,7 +349,7 @@ export function App() {
                     {user?.is_anonymous
                       ? t(
                           "This guest account lives on this device. Verify an email to keep access across devices.",
-                          "บัญชีผู้เยี่ยมชมอยู่ในอุปกรณ์นี้ ยืนยันอีเมลเพื่อเข้าถึงจากอุปกรณ์อื่น",
+                          "บัญชีผู้เยี่ยมชมใช้ได้เฉพาะอุปกรณ์นี้ ยืนยันอีเมลเพื่อใช้บัญชีนี้ในอุปกรณ์อื่น",
                         )
                       : user?.email}
                   </p>
@@ -363,17 +363,17 @@ export function App() {
                     >
                       {t(
                         "Create my own trips / Verify email",
-                        "สร้างทริปของฉัน / ยืนยันอีเมล",
+                        "ยืนยันอีเมลเพื่อสร้างทริป",
                       )}
                     </Button>
                   )}
                   <Button type="button" onClick={() => void prepareSignOut()}>
-                    {t("Sign out of this device", "ออกจากระบบในอุปกรณ์นี้")}
+                    {t("Sign out of this device", "ออกจากระบบบนอุปกรณ์นี้")}
                   </Button>
                   {signOutWarning && (
                     <section
                       role="alert"
-                      aria-label={t("Confirm sign out", "ยืนยันออกจากระบบ")}
+                      aria-label={t("Confirm sign out", "ยืนยันการออกจากระบบ")}
                     >
                       <p>
                         {user?.is_anonymous
@@ -383,7 +383,7 @@ export function App() {
                             )
                           : t(
                               "You can sign in again with your email. Saved trip data will be removed from this device.",
-                              "คุณลงชื่อเข้าใหม่ด้วยอีเมลได้ ข้อมูลทริปที่บันทึกจะถูกลบจากอุปกรณ์นี้",
+                              "คุณลงชื่อเข้าใช้ด้วยอีเมลได้อีกครั้ง ข้อมูลทริปที่บันทึกไว้จะถูกลบจากอุปกรณ์นี้",
                             )}
                       </p>
                       {pendingCount > 0 && (
@@ -395,10 +395,10 @@ export function App() {
                         </p>
                       )}
                       <Button disabled={busy} onClick={() => void signOut()}>
-                        {t("Confirm sign out", "ยืนยันออกจากระบบ")}
+                        {t("Confirm sign out", "ยืนยันการออกจากระบบ")}
                       </Button>
                       <Button onClick={() => setSignOutWarning(false)}>
-                        {t("Keep signed in", "อยู่ในระบบต่อ")}
+                        {t("Keep signed in", "ใช้บัญชีนี้ต่อ")}
                       </Button>
                     </section>
                   )}
@@ -465,7 +465,7 @@ export function App() {
               <p>
                 {t(
                   "If you plan to use Roam from your Home Screen, open this invitation in the installed app before requesting access. Sessions may differ between the app and browser.",
-                  "หากวางแผนจะใช้ Roam จากหน้าจอโฮม ให้เปิดคำเชิญนี้ในแอปที่ติดตั้งก่อนขอเข้าร่วม เซสชันในแอปและเบราว์เซอร์อาจต่างกัน",
+                  "หากจะใช้ Roam จากหน้าจอโฮม ให้เปิดคำเชิญในแอปที่ติดตั้งแล้วค่อยขอเข้าร่วม เพราะแอปกับเบราว์เซอร์อาจใช้บัญชีคนละบัญชี",
                 )}
               </p>
             </details>
@@ -542,7 +542,7 @@ export function App() {
                         )
                       : t(
                           "Check the invitation code or use the full link for this Roam site.",
-                          "ตรวจสอบรหัสคำเชิญหรือใช้ลิงก์ฉบับเต็มของเว็บไซต์ Roam นี้",
+                          "ตรวจสอบรหัสคำเชิญ หรือใช้ลิงก์คำเชิญแบบเต็มของ Roam",
                         )}
                   </p>
                 )}
@@ -601,8 +601,8 @@ export function App() {
               {[
                 ["title", t("Trip name", "ชื่อทริป"), "text"],
                 ["name", t("Your name", "ชื่อของคุณ"), "text"],
-                ["start", t("Start date", "วันเริ่ม"), "date"],
-                ["end", t("End date", "วันสิ้นสุด"), "date"],
+                ["start", t("Start date", "วันเริ่มทริป"), "date"],
+                ["end", t("End date", "วันสิ้นสุดทริป"), "date"],
                 [
                   "currency",
                   t("Currency (e.g. THB)", "สกุลเงิน เช่น THB"),
@@ -626,7 +626,7 @@ export function App() {
         )}
         {uid && (
           <Button onClick={() => void qc.invalidateQueries()}>
-            {t("Refresh status", "รีเฟรชสถานะ")}
+            {t("Refresh status", "ตรวจสอบสถานะล่าสุด")}
           </Button>
         )}
         {requests.data
@@ -640,7 +640,7 @@ export function App() {
                   ? t("Approved", "อนุมัติแล้ว")
                   : t(
                       "Declined — contact organizer",
-                      "ปฏิเสธ กรุณาติดต่อผู้จัด",
+                      "คำขอถูกปฏิเสธ กรุณาติดต่อผู้จัดทริป",
                     )}
             </p>
           ))}
@@ -654,7 +654,7 @@ export function App() {
               <p>
                 {t(
                   "No approved trips yet. Create a trip or join with an invitation.",
-                  "ยังไม่มีทริปที่อนุมัติ สร้างทริปหรือเข้าร่วมด้วยคำเชิญ",
+                  "คุณยังไม่มีทริปที่เข้าร่วมแล้ว สร้างทริปใหม่หรือใช้คำเชิญเพื่อเข้าร่วม",
                 )}
               </p>
             )}
@@ -672,8 +672,8 @@ export function App() {
                   </span>
                   <small>
                     {trip.status === "archived"
-                      ? t("Archived", "เก็บถาวร")
-                      : t("Active", "ใช้งาน")}
+                      ? t("Archived", "เก็บถาวรแล้ว")
+                      : t("Active", "ใช้งานอยู่")}
                   </small>
                 </Button>
               ))}
@@ -695,7 +695,10 @@ export function App() {
                 <h2>{trip.title}</h2>
                 <p>
                   {trip.start_date} — {trip.end_date} · {trip.base_currency} ·{" "}
-                  {trip.status}
+                  {t(
+                    trip.status,
+                    trip.status === "archived" ? "เก็บถาวรแล้ว" : "ใช้งานอยู่",
+                  )}
                 </p>
                 {uid && members.data && (
                   <TripActivity
@@ -721,8 +724,8 @@ export function App() {
                                     {" "}
                                     ·{" "}
                                     {m.can_edit_plan
-                                      ? t("Can edit itinerary", "แก้ไขแผนได้")
-                                      : t("Read only", "ดูได้อย่างเดียว")}
+                                      ? t("Can edit itinerary", "แก้ไขแผนการเดินทางได้")
+                                      : t("Read only", "ดูได้เท่านั้น")}
                                   </small>
                                 )}
                               </span>
@@ -842,7 +845,7 @@ export function App() {
                                   )}
                                   {t(
                                     "A new invitation replaces the previous reusable invitation.",
-                                    "คำเชิญใหม่จะแทนที่คำเชิญแบบใช้ซ้ำเดิม",
+                                    "คำเชิญใหม่จะแทนที่คำเชิญเดิมที่ใช้ได้หลายครั้ง",
                                   )}
                                 </p>
                                 <Button
@@ -880,7 +883,7 @@ export function App() {
                                 <Button
                                   onClick={() => void qc.invalidateQueries()}
                                 >
-                                  {t("Refresh status", "รีเฟรชสถานะ")}
+                                  {t("Refresh status", "ตรวจสอบสถานะล่าสุด")}
                                 </Button>
                               )}
                               {requests.data
@@ -973,7 +976,7 @@ export function App() {
                                   })
                                 }
                               >
-                                {t("Archive trip", "เก็บทริป")}
+                                {t("Archive trip", "เก็บทริปถาวร")}
                               </Button>
                               {trip.status === "archived" && (
                                 <Button
@@ -1069,7 +1072,7 @@ export function App() {
               src={qr.image}
               width="280"
               height="280"
-              alt={t("Trip invitation QR code", "QR คำเชิญเข้าร่วมทริป")}
+              alt={t("Trip invitation QR code", "คิวอาร์โค้ดสำหรับเข้าร่วมทริป")}
             />
             <p>
               {t("Invitation code", "รหัสคำเชิญ")} <strong>{qr.code}</strong>

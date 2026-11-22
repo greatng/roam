@@ -167,7 +167,7 @@ export function ReceiptAttachment({
         tr(
           thai,
           "Connect to the internet to save a receipt. Your compressed preview is still here.",
-          "เชื่อมต่ออินเทอร์เน็ตเพื่อบันทึกใบเสร็จ รูปตัวอย่างที่บีบอัดแล้วยังคงอยู่",
+          "เชื่อมต่ออินเทอร์เน็ตเพื่อบันทึกใบเสร็จ ระบบจะเก็บรูปตัวอย่างที่บีบอัดแล้วไว้",
         ),
       );
       return;
@@ -177,7 +177,7 @@ export function ReceiptAttachment({
         tr(
           thai,
           "Only the person who started this upload can retry it. Ask them to retry or remove it.",
-          "เฉพาะผู้ที่เริ่มอัปโหลดเท่านั้นที่ลองอีกครั้งได้ โปรดให้ผู้เริ่มอัปโหลดลองอีกครั้งหรือลบออก",
+          "ให้คนที่เริ่มอัปโหลดเป็นผู้ลองอัปโหลดอีกครั้งหรือลบรายการนี้",
         ),
       );
       return;
@@ -221,7 +221,7 @@ export function ReceiptAttachment({
         tr(
           thai,
           "This pending receipt belongs to a different photo size. Remove it before saving this photo.",
-          "ใบเสร็จที่ค้างอยู่นี้มีขนาดรูปอื่น โปรดลบก่อนบันทึกรูปนี้",
+          "รูปนี้มีขนาดต่างจากรูปที่อัปโหลดค้างไว้ กรุณาลบรายการเดิมก่อนบันทึกรูปนี้",
         ),
       );
       return;
@@ -270,7 +270,7 @@ export function ReceiptAttachment({
           tr(
             thai,
             "An earlier upload was recovered. The stored receipt is shown below.",
-            "กู้คืนรูปที่อัปโหลดไว้ก่อนหน้าแล้ว โดยแสดงใบเสร็จที่จัดเก็บไว้ด้านล่าง",
+            "กู้คืนรูปที่อัปโหลดไว้แล้ว ดูใบเสร็จได้ด้านล่าง",
           ),
         );
       } else setNotice("");
@@ -289,7 +289,7 @@ export function ReceiptAttachment({
           tr(
             thai,
             "Connect to the internet to save a receipt. Your compressed preview is still here.",
-            "เชื่อมต่ออินเทอร์เน็ตเพื่อบันทึกใบเสร็จ รูปตัวอย่างที่บีบอัดแล้วยังคงอยู่",
+            "เชื่อมต่ออินเทอร์เน็ตเพื่อบันทึกใบเสร็จ ระบบจะเก็บรูปตัวอย่างที่บีบอัดแล้วไว้",
           ),
         );
       else
@@ -378,7 +378,7 @@ export function ReceiptAttachment({
                 {tr(
                   thai,
                   "Archived trips are read-only. Receipt uploads are unavailable.",
-                  "ทริปที่เก็บถาวรเป็นแบบอ่านอย่างเดียว ไม่สามารถอัปโหลดใบเสร็จได้",
+                  "ทริปนี้เก็บถาวรแล้ว จึงดูข้อมูลได้เท่านั้นและอัปโหลดใบเสร็จไม่ได้",
                 )}
               </p>
             )}

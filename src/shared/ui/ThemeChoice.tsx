@@ -58,7 +58,7 @@ export function ThemeChoice({ thai = false }: Props) {
 
   return (
     <fieldset class="theme-choice">
-      <legend>{thai ? "รูปแบบธีม" : "Appearance"}</legend>
+      <legend>{thai ? "ธีมแอป" : "Appearance"}</legend>
       <div class="theme-choice-options">
         {options.map(({ value, english, thai: thaiLabel }) => {
           const active = selected === value;

@@ -71,7 +71,7 @@ export function EmailAccess({
   return (
     <section aria-labelledby="email-access-title">
       <h2 id="email-access-title">
-        {t("Create trips with your email", "ใช้อีเมลเพื่อสร้างทริป")}
+        {t("Create trips with your email", "สร้างทริปด้วยอีเมล")}
       </h2>
       <p>
         {t(
@@ -79,8 +79,8 @@ export function EmailAccess({
             ? "You can keep joining trips as a guest. Verify an email to create your own trips while keeping this guest identity."
             : "Sign in with a six-digit email code to create and manage your trips. Travelers can join by QR as guests.",
           guest
-            ? "คุณยังเข้าร่วมทริปแบบผู้เยี่ยมชมได้ ยืนยันอีเมลเพื่อสร้างทริปของคุณโดยคงบัญชีผู้เยี่ยมชมนี้ไว้"
-            : "ลงชื่อเข้าใช้ด้วยรหัสอีเมล 6 หลักเพื่อสร้างและจัดการทริป ผู้เดินทางเข้าร่วมแบบผู้เยี่ยมชมผ่าน QR ได้",
+            ? "คุณยังเข้าร่วมทริปในฐานะผู้เยี่ยมชมได้ หากต้องการสร้างทริปเอง ให้ยืนยันอีเมลกับบัญชีที่ใช้อยู่"
+            : "ใช้รหัส 6 หลักที่ส่งทางอีเมลเพื่อลงชื่อเข้าใช้และสร้างหรือจัดการทริป ผู้เดินทางสแกนคิวอาร์โค้ดเพื่อเข้าร่วมในฐานะผู้เยี่ยมชมได้",
         )}
       </p>
       {error && <p role="alert">{error}</p>}
@@ -155,7 +155,7 @@ export function EmailAccess({
               ? t("Sending…", "กำลังส่ง…")
               : cooldown
                 ? t(`Try again in ${cooldown}s`, `ลองใหม่ใน ${cooldown} วินาที`)
-                : t("Send sign-in code", "ส่งรหัสลงชื่อเข้าใช้")}
+                : t("Send sign-in code", "ส่งรหัสสำหรับลงชื่อเข้าใช้")}
           </Button>
         </form>
       )}

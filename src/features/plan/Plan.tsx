@@ -250,7 +250,7 @@ export function Plan({
         throw new RangeError(
           t(
             "Confirm overwrite before editing planned nights.",
-            "โปรดยืนยันการเขียนทับก่อนแก้ไขคืนที่วางแผนไว้",
+            "กรุณายืนยันการแทนที่เมืองที่บันทึกไว้",
           ),
         );
       const { error } = await supabase.rpc("set_nightly_destinations", {
@@ -273,7 +273,7 @@ export function Plan({
       setNightForm(null);
       setReplaceRange(false);
       setShowNightEditor(false);
-      setNotice(t("Destination nights saved.", "บันทึกเมืองที่พักแล้ว"));
+      setNotice(t("Destination nights saved.", "บันทึกเมืองสำหรับคืนที่เลือกแล้ว"));
       await refresh();
     } catch (error) {
       setNotice(
@@ -281,11 +281,11 @@ export function Plan({
           ? replaceRange || nightForm
             ? t(
                 "A selected night changed elsewhere. Refresh and review the latest plan before overwriting.",
-                "คืนที่เลือกถูกแก้ไขจากอุปกรณ์อื่น กรุณารีเฟรชและตรวจสอบก่อนเขียนทับ",
+                "มีการแก้ไขเมืองของคืนที่เลือกจากอุปกรณ์อื่น กรุณารีเฟรชและตรวจสอบก่อนแทนที่",
               )
             : t(
                 "Some selected nights are already planned. Review the range and confirm overwrite to replace them.",
-                "บางคืนมีแผนแล้ว กรุณาตรวจสอบช่วงวันที่และยืนยันการเขียนทับ",
+                "มีเมืองที่บันทึกไว้แล้วในบางคืน กรุณาตรวจสอบช่วงวันที่และยืนยันการแทนที่",
               )
           : errorMessage(error),
       );
@@ -302,10 +302,10 @@ export function Plan({
         ? error.code === "40001"
           ? t(
               "This night changed elsewhere. Refresh first.",
-              "คืนนี้ถูกแก้ไขจากอุปกรณ์อื่น กรุณารีเฟรช",
+              "ข้อมูลของคืนนี้ถูกแก้ไขจากอุปกรณ์อื่น กรุณารีเฟรช",
             )
           : error.message
-        : t("Night removed.", "ลบเมืองคืนนี้แล้ว"),
+        : t("Night removed.", "ลบเมืองที่บันทึกไว้สำหรับคืนนี้แล้ว"),
     );
     if (!error) await refresh();
   }
@@ -324,7 +324,7 @@ export function Plan({
         throw new RangeError(
           t(
             "Use a valid stay range within the trip. Check-out is the next morning.",
-            "กำหนดช่วงที่พักให้ถูกต้อง โดยวันออกจากที่พักคือเช้าวันถัดไป",
+            "กรุณาตรวจสอบวันเข้าพักและวันออก โดยวันออกต้องอยู่หลังคืนสุดท้ายที่พัก",
           ),
         );
       const { error } = await supabase.rpc("upsert_stay", {
@@ -531,7 +531,7 @@ export function Plan({
         <p role="status">
           {t(
             "Could not refresh the plan. Cached details may be shown while offline.",
-            "โหลดแผนไม่สำเร็จ หากออฟไลน์จะแสดงข้อมูลที่บันทึกไว้",
+            "อัปเดตแผนการเดินทางไม่ได้ หากออฟไลน์ ระบบอาจแสดงข้อมูลที่บันทึกไว้",
           )}
         </p>
       )}
@@ -562,7 +562,7 @@ export function Plan({
       />
       <nav
         class="plan-view-toggle"
-        aria-label={t("Itinerary view", "มุมมองแผนการเดินทาง")}
+        aria-label={t("Itinerary view", "เลือกมุมมองแผนการเดินทาง")}
       >
         <Button
           type="button"
@@ -618,7 +618,7 @@ export function Plan({
                           name={night.city}
                           items={[
                             {
-                              label: t("Edit this night", "แก้ไขคืนนี้"),
+                              label: t("Edit this night", "แก้ไขเมืองของคืนนี้"),
                               onSelect: () => {
                                 setNightForm(night);
                                 setReplaceRange(false);
@@ -664,7 +664,7 @@ export function Plan({
                               target="_blank"
                               rel="noreferrer"
                             >
-                              {t("Directions", "เส้นทาง")}
+                              {t("Directions", "ดูเส้นทาง")}
                             </a>
                           </>
                         )}
@@ -774,7 +774,7 @@ export function Plan({
                             target="_blank"
                             rel="noreferrer"
                           >
-                            {t("Directions", "เส้นทาง")}
+                            {t("Directions", "ดูเส้นทาง")}
                           </a>
                         )}
                         {activity.meeting_info && (
@@ -801,14 +801,14 @@ export function Plan({
                 >
                   <h4>
                     {nightForm
-                      ? t("Edit destination night", "แก้ไขเมืองคืนนี้")
+                      ? t("Edit destination night", "แก้ไขเมืองของคืนนี้")
                       : t(
                           "Add destination for a night or range",
-                          "เพิ่มเมืองสำหรับหนึ่งคืนหรือช่วงวันที่",
+                          "เพิ่มเมืองสำหรับคืนเดียวหรือหลายคืน",
                         )}
                   </h4>
                   <label>
-                    {t("From (night of)", "เริ่มคืนวันที่")}
+                    {t("From (night of)", "คืนแรก (วันที่)")}
                     <input
                       name="from"
                       type="date"
@@ -819,7 +819,7 @@ export function Plan({
                     />
                   </label>
                   <label>
-                    {t("Through (inclusive)", "ถึงวันที่ (รวมคืนนี้)")}
+                    {t("Through (inclusive)", "คืนสุดท้าย (วันที่)")}
                     <input
                       name="to"
                       type="date"
@@ -839,7 +839,7 @@ export function Plan({
                     />
                   </label>
                   <label>
-                    {t("Travel mode into this city", "การเดินทางเข้าเมืองนี้")}
+                    {t("Travel mode into this city", "เดินทางไปเมืองนี้ด้วยวิธีใด")}
                     <ModeSelect
                       name="transport"
                       value={nightForm?.transport_mode ?? ""}
@@ -855,7 +855,7 @@ export function Plan({
                     />
                     {t(
                       "I understand this will overwrite the selected nights",
-                      "ฉันเข้าใจว่าการดำเนินการนี้จะเขียนทับเมืองในคืนที่เลือก",
+                      "ฉันยืนยันให้แทนที่เมืองที่บันทึกไว้ในคืนที่เลือก",
                     )}
                   </label>
                   <Button
@@ -865,12 +865,12 @@ export function Plan({
                     class="plan-icon-button icon44"
                     aria-label={
                       nightForm
-                        ? t("Save night or range", "บันทึกคืนหรือช่วงวันที่")
+                        ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
                         : t("Save destination", "บันทึกเมือง")
                     }
                     title={
                       nightForm
-                        ? t("Save night or range", "บันทึกคืนหรือช่วงวันที่")
+                        ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
                         : t("Save destination", "บันทึกเมือง")
                     }
                   >
@@ -908,7 +908,7 @@ export function Plan({
               <p>
                 {formatDateLabel(stay.check_in_date, locale)} –{" "}
                 {formatDateLabel(stay.check_out_date, locale)} ·{" "}
-                {t("check-out", "วันออก")}
+                {t("check-out", "วันออกจากที่พัก")}
               </p>
               {stay.address && <p>{stay.address}</p>}
               {stay.address && (
@@ -917,7 +917,7 @@ export function Plan({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {t("Directions", "เส้นทาง")}
+                  {t("Directions", "ดูเส้นทาง")}
                 </a>
               )}
               {stay.phone && <p>{stay.phone}</p>}
@@ -966,7 +966,7 @@ export function Plan({
                     <p>
                       {t(
                         "Changes apply to this stay's entire check-in/check-out range.",
-                        "การแก้ไขมีผลกับที่พักนี้ตลอดช่วงวันเข้าและวันออกที่ระบุ",
+                        "การแก้ไขจะมีผลกับที่พักนี้ทุกคืนในช่วงที่ระบุ",
                       )}
                     </p>
                   )}
@@ -993,7 +993,7 @@ export function Plan({
                   <label>
                     {t(
                       "Check-out (exclusive)",
-                      "วันออกจากที่พัก (ไม่รวมคืนนั้น)",
+                      "วันออกจากที่พัก (ไม่นับเป็นคืนพัก)",
                     )}
                     <input
                       name="to"
@@ -1136,7 +1136,7 @@ export function Plan({
               >
                 {t(
                   "Add city for a night or range",
-                  "เพิ่มเมืองสำหรับหนึ่งคืนหรือช่วงวันที่",
+                  "เพิ่มเมืองสำหรับคืนเดียวหรือหลายคืน",
                 )}
               </Button>
               <Button
@@ -1265,7 +1265,7 @@ export function Plan({
               />
             </label>
             <label>
-              {t("Travel mode into activity", "การเดินทางไปยังกิจกรรม")}
+              {t("Travel mode into activity", "เดินทางไปทำกิจกรรมด้วยวิธีใด")}
               <ModeSelect
                 name="transport"
                 value={activityForm?.transport_mode ?? ""}

@@ -613,7 +613,7 @@ export function TripActivity({
             }
             await localDb.outbox.delete(op.id);
             if (!disposed)
-              setNotice(tr("Sent and confirmed.", "ส่งและยืนยันแล้ว"));
+              setNotice(tr("Sent and confirmed.", "ยืนยันรายการที่ส่งแล้ว"));
             window.dispatchEvent(new Event("travelmate-data-updated"));
           } catch (e) {
             const confirmedExpense = (await localDb.outbox.get(op.id))
@@ -636,7 +636,7 @@ export function TripActivity({
                       )
                     : tr(
                         "This item needs organizer help and remains saved on this device.",
-                        "รายการนี้ต้องให้ผู้จัดช่วยเหลือ และยังบันทึกอยู่ในอุปกรณ์",
+                        "รายการนี้ยังอยู่ในอุปกรณ์ กรุณาติดต่อผู้จัดทริปเพื่อขอความช่วยเหลือ",
                       ),
                 );
               continue;
@@ -654,7 +654,7 @@ export function TripActivity({
                     )
                   : tr(
                       "Could not send yet. Your item is saved and will retry when connected.",
-                      "ยังส่งไม่ได้ รายการถูกบันทึกและจะลองอีกครั้งเมื่อเชื่อมต่อ",
+                      "ยังส่งรายการไม่ได้ ระบบบันทึกไว้แล้วและจะลองส่งอีกครั้งเมื่อออนไลน์",
                     ),
               );
             break;
@@ -703,7 +703,7 @@ export function TripActivity({
     try {
       if (time && !date)
         throw new RangeError(
-          tr("Choose a day for this time.", "กรุณาเลือกวันที่สำหรับเวลานี้"),
+          tr("Choose a day for this time.", "กรุณาเลือกวันที่ก่อนระบุเวลา"),
         );
       starts =
         date && time
@@ -840,7 +840,7 @@ export function TripActivity({
         throw new Error(
           tr(
             "Amount exceeds the supported limit.",
-            "จำนวนเงินเกินขีดจำกัดที่รองรับ",
+            "จำนวนเงินสูงเกินที่ระบบรองรับ",
           ),
         );
       const shares = splitAmount(Number(amount), selected);
@@ -996,7 +996,7 @@ export function TripActivity({
       );
       if (amount <= 0n || amount > BigInt(Number.MAX_SAFE_INTEGER))
         throw new Error(
-          tr("Enter a valid supported amount.", "กรุณากรอกจำนวนเงินที่รองรับ"),
+          tr("Enter a valid supported amount.", "กรุณาตรวจสอบจำนวนเงินแล้วกรอกใหม่"),
         );
       const selected = approved
         .filter((m) => f.get(`share-${m.id}`) === "on")
@@ -1089,15 +1089,15 @@ export function TripActivity({
           onClick={() => setSenior(!senior)}
         >
           {senior
-            ? tr("Exit senior view", "ออกจากมุมมองผู้สูงวัย")
-            : tr("Senior view", "มุมมองผู้สูงวัย")}
+            ? tr("Exit senior view", "ปิดโหมดผู้สูงวัย")
+            : tr("Senior view", "โหมดผู้สูงวัย")}
         </Button>
       </div>
       {offline && (
         <p role="status">
           {tr(
             "Offline — showing saved trip data. Updates will send when connected.",
-            "ออฟไลน์ — แสดงข้อมูลที่บันทึกไว้ จะส่งรายการเมื่อเชื่อมต่อ",
+            "ขณะนี้ออฟไลน์ ระบบจะแสดงข้อมูลที่บันทึกไว้และส่งรายการเมื่อออนไลน์อีกครั้ง",
           )}
         </p>
       )}
@@ -1132,11 +1132,11 @@ export function TripActivity({
             <article class="offline-operation" key={op.id}>
               <strong>
                 {op.kind === "check_in"
-                  ? tr("Previous check-in", "เช็กอินเดิม")
+                  ? tr("Previous check-in", "การเช็กอินก่อนหน้า")
                   : op.expenseId && op.receipt
                     ? tr(
                         "Expense saved; receipt pending",
-                        "บันทึกค่าใช้จ่ายแล้ว รูปใบเสร็จรอส่ง",
+                        "บันทึกค่าใช้จ่ายแล้ว เหลือส่งรูปใบเสร็จ",
                       )
                     : tr("Expense", "ค่าใช้จ่าย")}
               </strong>
@@ -1155,7 +1155,7 @@ export function TripActivity({
                       ? "กำลังส่ง"
                       : op.state === "failed"
                         ? "ส่งไม่สำเร็จ"
-                        : "ต้องให้ผู้จัดช่วยเหลือ",
+                        : "กรุณาติดต่อผู้จัดทริป",
                 )}
               </span>
               {op.error && <p role="alert">{op.error}</p>}
@@ -1199,7 +1199,7 @@ export function TripActivity({
         <nav
           ref={tabs}
           class="activity-tabs"
-          aria-label={tr("Trip sections", "ส่วนของทริป")}
+          aria-label={tr("Trip sections", "เมนูทริป")}
         >
           {!senior && (
             <Button
@@ -1318,10 +1318,10 @@ export function TripActivity({
               </svg>
             </Button>
             <label>
-              <span>{tr("Itinerary date", "วันที่กำหนดการ")}</span>
+              <span>{tr("Itinerary date", "วันที่ในแผน")}</span>
               <input
                 type="date"
-                aria-label={tr("Itinerary date", "วันที่กำหนดการ")}
+                aria-label={tr("Itinerary date", "วันที่ในแผน")}
                 min={trip.start_date}
                 max={trip.end_date}
                 value={selectedDay}
@@ -1354,16 +1354,16 @@ export function TripActivity({
           {!isActualToday ? null : (
             <div class="next-stop">
               {today.state === "trip-finished" ? (
-                <strong>{tr("Trip finished", "จบทริปแล้ว")}</strong>
+                <strong>{tr("Trip finished", "ทริปสิ้นสุดแล้ว")}</strong>
               ) : today.state === "before-trip" ? (
                 <>
-                  <strong>{tr("Trip starts", "ทริปเริ่ม")}</strong>
+                  <strong>{tr("Trip starts", "ทริปเริ่มวันที่")}</strong>
                   <p>
                     {formatDateLabel(trip.start_date, thai ? "th-TH" : "en")}
                   </p>
                 </>
               ) : today.state === "day-finished" ? (
-                <strong>{tr("Today is finished", "วันนี้จบแล้ว")}</strong>
+                <strong>{tr("Today is finished", "จบกิจกรรมของวันนี้แล้ว")}</strong>
               ) : null}
               {current && !chosenStopId && !senior && (
                 <>
@@ -1375,7 +1375,7 @@ export function TripActivity({
                 <label>
                   {tr(
                     "Current stop on this device",
-                    "จุดหมายปัจจุบันในอุปกรณ์นี้",
+                    "จุดหมายปัจจุบัน (เฉพาะเครื่องนี้)",
                   )}
                   <select
                     value={chosenStopId}
@@ -1403,7 +1403,7 @@ export function TripActivity({
                     <strong>
                       {tr(
                         "Current stop on this device",
-                        "จุดหมายปัจจุบันในอุปกรณ์นี้",
+                        "จุดหมายปัจจุบัน (เฉพาะเครื่องนี้)",
                       )}
                     </strong>
                   )}
@@ -1434,7 +1434,7 @@ export function TripActivity({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {tr("Open directions", "เปิดเส้นทางในแผนที่")}
+                    {tr("Open directions", "ดูเส้นทาง")}
                   </a>
                 </>
               ) : today.state === "active" ? (
@@ -1446,7 +1446,7 @@ export function TripActivity({
             class="tonight-card"
             aria-label={tr(
               "Selected day destination and accommodation",
-              "เมืองและที่พักของวันที่เลือก",
+              "เมืองและที่พักประจำวัน",
             )}
           >
             <p>
@@ -1482,7 +1482,7 @@ export function TripActivity({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {tr("Accommodation directions", "เส้นทางไปที่พัก")}
+                  {tr("Accommodation directions", "ดูเส้นทางไปที่พัก")}
                 </a>
                 {(selectedStay.address || selectedStay.phone) && (
                   <details class="stay-details">
@@ -1492,7 +1492,7 @@ export function TripActivity({
                     {selectedStay.address && <p>{selectedStay.address}</p>}
                     {selectedStay.phone && (
                       <a href={`tel:${selectedStay.phone}`}>
-                        {tr("Call accommodation", "โทรหาที่พัก")}:{" "}
+                        {tr("Call accommodation", "โทรติดต่อที่พัก")}:{" "}
                         {selectedStay.phone}
                       </a>
                     )}
@@ -1511,7 +1511,7 @@ export function TripActivity({
             <p role="alert">
               {tr(
                 "Could not load itinerary. Try again when connected.",
-                "โหลดกำหนดการไม่ได้ กรุณาลองใหม่เมื่อเชื่อมต่ออินเทอร์เน็ต",
+                "โหลดแผนการเดินทางไม่ได้ กรุณาลองใหม่เมื่อออนไลน์",
               )}
             </p>
           ) : todayItems.length === 0 ? (
@@ -1534,12 +1534,12 @@ export function TripActivity({
             </p>
           ) : (
             <>
-              <h3>{tr("Itinerary", "กำหนดการเดินทาง")}</h3>
+              <h3>{tr("Itinerary", "แผนการเดินทาง")}</h3>
               {itineraryQuery.isError && (
                 <p role="alert">
                   {tr(
                     "Could not load itinerary. Try again when connected.",
-                    "โหลดกำหนดการไม่ได้ กรุณาลองใหม่เมื่อเชื่อมต่ออินเทอร์เน็ต",
+                    "โหลดแผนการเดินทางไม่ได้ กรุณาลองใหม่เมื่อออนไลน์",
                   )}
                 </p>
               )}
@@ -1576,7 +1576,7 @@ export function TripActivity({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {tr("Open directions", "เปิดเส้นทางในแผนที่")}
+                    {tr("Open directions", "ดูเส้นทาง")}
                   </a>
                   {canEditPlan && !senior && (
                     <>
@@ -1807,7 +1807,7 @@ export function TripActivity({
             <p>
               {tr(
                 "Enter the amount in the trip currency. Splits use the smallest currency unit; any remainder goes to the first selected traveler.",
-                "กรอกจำนวนเงินตามสกุลเงินของทริป เศษจากการหารจะแบ่งให้ผู้เดินทางคนแรกที่เลือก",
+                "กรอกจำนวนเงินในสกุลเงินของทริป หากหารไม่ลงตัว ระบบจะบวกเศษให้ผู้เดินทางคนแรกที่เลือก",
               )}
             </p>
             <form
@@ -1823,7 +1823,7 @@ export function TripActivity({
               }}
             >
               <label>
-                {tr("What was it for?", "ค่าอะไร")}
+                {tr("What was it for?", "รายละเอียดค่าใช้จ่าย")}
                 <input name="description" required maxLength={240} />
               </label>
               <label>
@@ -1880,7 +1880,7 @@ export function TripActivity({
                 </select>
               </label>
               <fieldset>
-                <legend>{tr("Split between", "หารระหว่าง")}</legend>
+                <legend>{tr("Split between", "หารกับใครบ้าง")}</legend>
                 {approved.map((m) => (
                   <label class="check-option">
                     <input
@@ -1924,15 +1924,15 @@ export function TripActivity({
               <p class="balance" key={m.id}>
                 {m.display_name}
                 {m.status !== "approved"
-                  ? ` (${tr("removed", "นำออกแล้ว")})`
+                  ? ` (${tr("removed", "ถูกนำออกจากทริปแล้ว")})`
                   : ""}
                 :{" "}
                 <strong>
                   {value > 0n
-                    ? tr("is owed", "มีคนต้องคืน")
+                    ? tr("is owed", "จะได้รับคืน")
                     : value < 0n
                       ? tr("owes", "ต้องจ่าย")
-                      : tr("settled", "เรียบร้อย")}{" "}
+                      : tr("settled", "ชำระครบแล้ว")}{" "}
                   {formatMinor(
                     value < 0n ? -value : value,
                     trip.base_currency,
@@ -1944,7 +1944,7 @@ export function TripActivity({
           })}
           {settlements.length > 0 && (
             <>
-              <h3>{tr("Suggested settlements", "รายการแนะนำให้ชำระ")}</h3>
+              <h3>{tr("Suggested settlements", "รายการโอนเงินที่แนะนำ")}</h3>
               {settlements.map((s) => (
                 <p>
                   {tripMembers.find((m) => m.id === s.from)?.display_name}{" "}
@@ -2014,7 +2014,7 @@ export function TripActivity({
             receiptCleanupsQuery.data?.map((cleanup) => (
               <div class="pending" key={cleanup.id}>
                 <p>
-                  {tr("Receipt cleanup pending", "รูปใบเสร็จรอลบ")}:{" "}
+                  {tr("Receipt cleanup pending", "รูปใบเสร็จที่ยังลบไม่สำเร็จ")}:{" "}
                   {cleanup.description}
                 </p>
                 <Button
@@ -2204,7 +2204,7 @@ export function TripActivity({
                         </select>
                       </label>
                       <fieldset>
-                        <legend>{tr("Split between", "หารระหว่าง")}</legend>
+                        <legend>{tr("Split between", "หารกับใครบ้าง")}</legend>
                         {approved.map((m) => (
                           <label class="check-option">
                             <input
@@ -2263,7 +2263,11 @@ export function TripActivity({
           </p>
 
           <p>
-            {tr("Trip status", "สถานะทริป")}: {trip.status}
+            {tr("Trip status", "สถานะทริป")}:{" "}
+            {tr(
+              trip.status,
+              trip.status === "archived" ? "เก็บถาวรแล้ว" : "ใช้งานอยู่",
+            )}
           </p>
           <h3>{tr("Travelers", "ผู้เดินทาง")}</h3>
           {tripMembers.map((m) => (
@@ -2271,7 +2275,7 @@ export function TripActivity({
               {m.display_name}
               {m.role === "organizer" ? ` · ${tr("Organizer", "ผู้จัด")}` : ""}
               {m.status !== "approved"
-                ? ` · ${tr("removed", "นำออกแล้ว")}`
+                ? ` · ${tr("removed", "ถูกนำออกจากทริปแล้ว")}`
                 : ""}
             </p>
           ))}
@@ -2342,7 +2346,7 @@ function EmergencyCard({
   }
   return (
     <div class="help-card">
-      <strong>{tr("Family contact", "ผู้ติดต่อในครอบครัว")}</strong>
+      <strong>{tr("Family contact", "ผู้ติดต่อฉุกเฉินในครอบครัว")}</strong>
       {card?.emergency_contact_name && (
         <p>
           {card.emergency_contact_name}
@@ -2356,18 +2360,18 @@ function EmergencyCard({
       {organizer && (
         <details onToggle={revealOpenEditor}>
           <summary>
-            {tr("Edit family contact", "แก้ไขผู้ติดต่อในครอบครัว")}
+            {tr("Edit family contact", "แก้ไขข้อมูลติดต่อฉุกเฉิน")}
           </summary>
           <form class="editor-panel" tabIndex={-1} onSubmit={save}>
             <label>
-              {tr("Family contact", "ผู้ติดต่อในครอบครัว")}
+              {tr("Family contact", "ผู้ติดต่อฉุกเฉินในครอบครัว")}
               <input
                 name="contact"
                 defaultValue={card?.emergency_contact_name ?? ""}
               />
             </label>
             <label>
-              {tr("Contact phone", "เบอร์ติดต่อ")}
+              {tr("Contact phone", "เบอร์โทรติดต่อ")}
               <input
                 name="phone"
                 type="tel"

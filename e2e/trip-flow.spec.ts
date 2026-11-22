@@ -3691,6 +3691,22 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
       path: testInfo.outputPath(`trip-navigation-${theme}.png`),
       animations: "disabled",
     });
+    await nav.getByRole("button", { name: "Itinerary", exact: true }).click();
+    const itinerary = page.getByRole("region", { name: "Trip itinerary" });
+    const viewToggle = itinerary.getByRole("navigation", {
+      name: "Itinerary view",
+    });
+    const firstDay = itinerary.locator(".plan-day-heading").first();
+    await expect(firstDay).toBeVisible();
+    const viewBounds = (await viewToggle.boundingBox())!;
+    const dayBounds = (await firstDay.boundingBox())!;
+    expect(dayBounds.y - viewBounds.y - viewBounds.height).toBeLessThan(12);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: testInfo.outputPath(`trip-itinerary-${theme}.png`),
+      animations: "disabled",
+    });
+    await nav.getByRole("button", { name: "Overview", exact: true }).click();
   }
 
   await buttons.first().focus();
@@ -3723,6 +3739,65 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   }
 });
 
+test("Thai trip labels and itinerary stay readable on a narrow screen", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile-chromium",
+    "Narrow touch viewport",
+  );
+  await page.setViewportSize({ width: 320, height: 720 });
+  await installFixture(page, { longHotel: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "ไทย / English" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "th");
+  await expect(page.locator(".trip-workspace > p")).toContainText("ใช้งานอยู่");
+  await expect(page.getByLabel("วันที่ในแผน")).toBeVisible();
+  await expect(
+    page.getByRole("strong").filter({ hasText: "ผู้ติดต่อฉุกเฉินในครอบครัว" }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: testInfo.outputPath("trip-overview-thai.png"),
+    animations: "disabled",
+  });
+
+  const nav = page.getByRole("navigation", { name: "เมนูทริป" });
+  const buttons = nav.getByRole("button");
+  await expect(buttons).toHaveText([
+    "ภาพรวม",
+    "แผนการเดินทาง",
+    "ค่าใช้จ่าย",
+    "เตรียมตัว",
+    "ทริป",
+  ]);
+  for (const button of await buttons.all()) {
+    await button.scrollIntoViewIfNeeded();
+    const row = (await nav.boundingBox())!;
+    const bounds = (await button.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(row.x);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(row.x + row.width);
+  }
+
+  await nav.getByRole("button", { name: "แผนการเดินทาง", exact: true }).click();
+  const itinerary = page.getByRole("region", { name: "แผนการเดินทาง" });
+  await expect(
+    itinerary.getByRole("button", { name: "แผนรายวัน" }),
+  ).toBeVisible();
+  await expect(itinerary.getByText("วันที่ 1", { exact: true })).toBeVisible();
+  const stay = itinerary.locator(".plan-hotel-card").first();
+  await expect(stay).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: testInfo.outputPath("trip-itinerary-thai.png"),
+    animations: "disabled",
+  });
+});
+
 test("header account icon opens the email panel and fits a narrow viewport", async ({
   page,
 }) => {
@@ -3745,6 +3820,8 @@ test("header account icon opens the email panel and fits a narrow viewport", asy
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
+  // Let the account menu's post-render effect register its Escape listener.
+  await page.clock.runFor(150);
   await page.keyboard.press("Escape");
   await expect(account).toHaveAttribute("aria-expanded", "false");
   await expect(account).toBeFocused();
