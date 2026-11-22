@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const { token, action, name } = JSON.parse(body);
     if (
       typeof token !== "string" ||
-      !/^[a-f0-9]{64}$/.test(token) ||
+      !/^(?:[a-f0-9]{16}|[a-f0-9]{64})$/.test(token) ||
       !["validate", "redeem"].includes(action)
     )
       return reply({ error: "invalid_invite" }, 400);

@@ -360,6 +360,31 @@ details > summary {
   font-weight: 700;
   min-height: 44px;
 }
+.guest-entry-form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.guest-entry-acknowledgement {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.guest-entry-acknowledgement input[type="checkbox"] {
+  flex: none;
+  margin: 0;
+}
+.guest-install-help {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.guest-install-help summary {
+  width: fit-content;
+  align-content: center;
+}
 .expense-entry {
   padding: 0.8rem 1rem;
   border: 1px solid var(--line);
