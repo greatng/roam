@@ -714,6 +714,12 @@ details > summary {
   border: 0;
   padding: 0;
 }
+.trip-dashboard > h2 {
+  margin-block-end: 0.2rem;
+}
+.trip-dashboard > p {
+  margin-block-start: 0;
+}
 .trip-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));

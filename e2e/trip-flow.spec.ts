@@ -3622,6 +3622,16 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   await installFixture(page);
   await page.goto("/");
   const card = await openTrip(page);
+  const dashboard = page.getByRole("region", { name: "Choose a trip" });
+  const dashboardHeading = dashboard.getByRole("heading", {
+    name: "Your trips",
+  });
+  const gapBelowHeading = async (content: Locator) => {
+    const heading = (await dashboardHeading.boundingBox())!;
+    const next = (await content.boundingBox())!;
+    return next.y - heading.y - heading.height;
+  };
+  expect(await gapBelowHeading(card)).toBeLessThan(4);
   const title = await card
     .getByText("Bangkok Weekend", { exact: true })
     .boundingBox();
@@ -3737,6 +3747,14 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
       })
       .toBe(true);
   }
+
+  await page.route(/\/rest\/v1\/trips(?:\?|$)/, (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.reload();
+  const empty = dashboard.getByText("No approved trips yet.", { exact: false });
+  await expect(empty).toBeVisible();
+  expect(await gapBelowHeading(empty)).toBeLessThan(4);
 });
 
 test("Thai trip labels and itinerary stay readable on a narrow screen", async ({
