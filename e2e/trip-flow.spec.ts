@@ -1917,6 +1917,17 @@ test.describe("Plan editor regressions", () => {
     await expect(editStayForm.getByLabel("Phone")).toHaveValue(
       "+66 2 123 4567",
     );
+    const editorActions = editStayForm.locator(".plan-editor-actions");
+    for (const name of ["Save accommodation", "Cancel"]) {
+      const action = editorActions.getByRole("button", { name, exact: true });
+      await expect(action.locator("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
+      const bounds = (await action.boundingBox())!;
+      expect(bounds.width).toBeGreaterThanOrEqual(44);
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+    }
     const currentViewport = page.viewportSize();
     if (currentViewport && currentViewport.width > 600)
       await page.setViewportSize({

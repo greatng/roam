@@ -5,6 +5,7 @@ import {
   type ActivityTag,
 } from "./ActivityTag";
 import { ItineraryExport } from "./ItineraryExport";
+import { PlanEditorActions } from "./PlanEditorActions";
 import type { PdfDay, PdfLine } from "./itinerary-pdf";
 import { Button } from "../../shared/ui/Button";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -858,38 +859,18 @@ export function Plan({
                       "ฉันยืนยันให้แทนที่เมืองที่บันทึกไว้ในคืนที่เลือก",
                     )}
                   </label>
-                  <Button
-                    type="submit"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={
+                  <PlanEditorActions
+                    saveLabel={
                       nightForm
                         ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
                         : t("Save destination", "บันทึกเมือง")
                     }
-                    title={
-                      nightForm
-                        ? t("Save night or range", "บันทึกเมืองสำหรับคืนที่เลือก")
-                        : t("Save destination", "บันทึกเมือง")
-                    }
-                  >
-                    <ActionIcon kind="save" />
-                  </Button>
-                  <Button
-                    type="button"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Cancel", "ยกเลิก")}
-                    title={t("Cancel", "ยกเลิก")}
-                    onClick={() => {
+                    cancelLabel={t("Cancel", "ยกเลิก")}
+                    onCancel={() => {
                       setNightForm(null);
                       setShowNightEditor(false);
                     }}
-                  >
-                    <ActionIcon kind="cancel" />
-                  </Button>
+                  />
                 </form>
               )}
             </>
@@ -1022,30 +1003,14 @@ export function Plan({
                       defaultValue={stayForm?.phone ?? ""}
                     />
                   </label>
-                  <Button
-                    type="submit"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Save accommodation", "บันทึกที่พัก")}
-                    title={t("Save accommodation", "บันทึกที่พัก")}
-                  >
-                    <ActionIcon kind="save" />
-                  </Button>
-                  <Button
-                    type="button"
-                    svgOnly
-                    appearance="tertiary"
-                    class="plan-icon-button icon44"
-                    aria-label={t("Cancel", "ยกเลิก")}
-                    title={t("Cancel", "ยกเลิก")}
-                    onClick={() => {
+                  <PlanEditorActions
+                    saveLabel={t("Save accommodation", "บันทึกที่พัก")}
+                    cancelLabel={t("Cancel", "ยกเลิก")}
+                    onCancel={() => {
                       setStayForm(null);
                       setShowStayEditor(false);
                     }}
-                  >
-                    <ActionIcon kind="cancel" />
-                  </Button>
+                  />
                 </form>
               )}
             </>
@@ -1278,30 +1243,14 @@ export function Plan({
               tag={activityForm?.activity_tag}
               thai={thai}
             />
-            <Button
-              type="submit"
-              svgOnly
-              appearance="tertiary"
-              class="plan-icon-button icon44"
-              aria-label={t("Save activity", "บันทึกกิจกรรม")}
-              title={t("Save activity", "บันทึกกิจกรรม")}
-            >
-              <ActionIcon kind="save" />
-            </Button>
-            <Button
-              type="button"
-              svgOnly
-              appearance="tertiary"
-              class="plan-icon-button icon44"
-              aria-label={t("Cancel", "ยกเลิก")}
-              title={t("Cancel", "ยกเลิก")}
-              onClick={() => {
+            <PlanEditorActions
+              saveLabel={t("Save activity", "บันทึกกิจกรรม")}
+              cancelLabel={t("Cancel", "ยกเลิก")}
+              onCancel={() => {
                 setActivityForm(null);
                 setShowActivityEditor(false);
               }}
-            >
-              <ActionIcon kind="cancel" />
-            </Button>
+            />
           </form>
         </section>
       )}
