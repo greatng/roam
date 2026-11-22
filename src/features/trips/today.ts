@@ -1,3 +1,5 @@
+import { clockStampAt } from "../plan/timezone";
+
 export type TodayStop = {
   id: string;
   starts_at: string | null;
@@ -58,8 +60,9 @@ export function todayStops<T extends TodayStop>(
   now: Date,
   timezone: string,
   chosenId?: string,
+  deviceTimezone = timezone,
 ) {
-  const day = tripDateAt(now, timezone);
+  const day = tripDateAt(now, deviceTimezone);
   if (trip.status === "completed" || day > trip.end_date)
     return {
       day,
@@ -84,11 +87,12 @@ export function todayStops<T extends TodayStop>(
       : trip.end_date;
   const stops = stopsForTripDay(items, visibleDay, timezone);
   const timed = stops.filter((item) => item.starts_at);
+  const clockNow = clockStampAt(now, deviceTimezone);
   const elapsed = timed.filter(
-    (item) => new Date(item.starts_at!).getTime() <= now.getTime(),
+    (item) => clockStampAt(new Date(item.starts_at!), timezone) <= clockNow,
   );
   const future = timed.find(
-    (item) => new Date(item.starts_at!).getTime() > now.getTime(),
+    (item) => clockStampAt(new Date(item.starts_at!), timezone) > clockNow,
   );
   const current = chosenId
     ? stops.find((item) => item.id === chosenId)

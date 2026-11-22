@@ -232,7 +232,7 @@ describe("Plan editors", () => {
       .getByLabelText("Activity")
       .closest("form") as HTMLFormElement;
     expect(document.activeElement).toBe(editor);
-    fireEvent.change(screen.getByLabelText("Destination time"), {
+    fireEvent.change(screen.getByLabelText("Activity time"), {
       target: { value: "10:15" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save activity" }));

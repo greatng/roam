@@ -308,6 +308,7 @@ test("reusable invitations share destination-date expiry and preserve requests a
     for (const migration of [
       "202610280001_foundation.sql",
       "20261122042959_reusable_trip_invitations.sql",
+      "20261122051012_device_clock_invitation_expiry.sql",
     ]) {
       await db.exec(readFileSync("supabase/migrations/" + migration, "utf8"));
     }
@@ -364,8 +365,19 @@ test("reusable invitations share destination-date expiry and preserve requests a
     );
     const {
       rows: [replacement],
-    } = await create();
+    } = await db.query<{ id: string; token: string }>(
+      "select * from create_reusable_invite_until($1, '2099-12-31 15:00Z')",
+      [trip],
+    );
     await db.exec("reset role");
+    expect(
+      (
+        await db.query(
+          "select expires_at = '2099-12-31 15:00Z'::timestamptz as correct_expiry from trip_invites where id = $1",
+          [replacement.id],
+        )
+      ).rows,
+    ).toEqual([{ correct_expiry: true }]);
     expect((await redeem(invite.token, guests[0])).error).toBe(
       "invalid_invite",
     );

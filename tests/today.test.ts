@@ -103,3 +103,27 @@ it("groups existing timed stops by their local date, preserving explicit days fo
     ),
   ).toEqual(["untimed"]);
 });
+
+it("uses the device day and clock against the existing scheduled clock times", () => {
+  const result = todayStops(
+    stops,
+    trip,
+    new Date("2026-11-02T01:00:00Z"),
+    "Asia/Bangkok",
+    undefined,
+    "Asia/Tokyo",
+  );
+  expect(result.day).toBe("2026-11-02");
+  expect(result.current?.id).toBe("early");
+  expect(result.next?.id).toBe("late");
+  expect(
+    todayStops(
+      stops,
+      trip,
+      new Date("2026-11-02T01:00:00Z"),
+      "Asia/Bangkok",
+      undefined,
+      "America/Los_Angeles",
+    ).state,
+  ).toBe("before-trip");
+});
