@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-import css from "../src/style.css?raw";
+
+const css = readFileSync("src/style.css", "utf8");
 
 function palette(selector: string) {
   const block = css.split(`${selector} {`)[1].split("}")[0];
