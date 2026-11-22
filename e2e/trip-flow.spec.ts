@@ -3489,3 +3489,102 @@ test("captures compact mobile Overview and Itinerary in light and dark themes", 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await capture("itinerary", "light");
 });
+
+test("Preparation shares item names and keeps checkmarks and private lists per traveler", async ({
+  page,
+  context,
+}, testInfo) => {
+  const sharedItems = [{ id: "passport", title: "Passport" }];
+  async function openChecklist(target: typeof page, guest: boolean) {
+    await installFixture(target, { guest, participant: guest });
+    await target.route("**/rest/v1/trip_preparation_items*", async (route) => {
+      const request = route.request();
+      const id = new URL(request.url()).searchParams.get("id")?.slice(3);
+      switch (request.method()) {
+        case "POST":
+          sharedItems.push({ id: "jr", title: request.postDataJSON().title });
+          return route.fulfill({ status: 201, body: "" });
+        case "PATCH":
+          sharedItems.find((item) => item.id === id)!.title =
+            request.postDataJSON().title;
+          return route.fulfill({ json: { id } });
+        case "DELETE":
+          sharedItems.splice(
+            sharedItems.findIndex((item) => item.id === id),
+            1,
+          );
+          return route.fulfill({ json: { id } });
+        default:
+          return route.fulfill({ json: sharedItems });
+      }
+    });
+    await target.goto("/");
+    await openTrip(target);
+    await target.getByRole("button", { name: "Preparation" }).click();
+    await expect(
+      target
+        .getByRole("region", { name: "Trip checklist" })
+        .getByRole("checkbox", { name: "Passport" }),
+    ).toBeVisible();
+  }
+
+  if (testInfo.project.use.hasTouch)
+    await page.setViewportSize({ width: 320, height: 650 });
+  await openChecklist(page, false);
+  const tripList = page.getByRole("region", { name: "Trip checklist" });
+  const myList = page.getByRole("region", { name: "My checklist" });
+  await tripList.getByLabel("New item").fill("Rail pass");
+  await tripList.getByRole("button", { name: "Add item" }).click();
+  await tripList.getByRole("button", { name: "Edit Rail pass" }).click();
+  await tripList.getByLabel("Edit item").fill("JR Pass");
+  await tripList.getByRole("button", { name: "Save item" }).click();
+  await tripList.getByRole("checkbox", { name: "Passport" }).check();
+  await myList.getByLabel("New item").fill("Medication");
+  await myList.getByRole("button", { name: "Add item" }).click();
+  await myList.getByRole("checkbox", { name: "Medication" }).check();
+  await page.reload();
+  await expect(
+    tripList.getByRole("checkbox", { name: "Passport" }),
+  ).toBeChecked();
+  await expect(
+    myList.getByRole("checkbox", { name: "Medication" }),
+  ).toBeChecked();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+  const guestPage = await context.newPage();
+  await openChecklist(guestPage, true);
+  const guestTripList = guestPage.getByRole("region", {
+    name: "Trip checklist",
+  });
+  const guestPersonalList = guestPage.getByRole("region", {
+    name: "My checklist",
+  });
+  await expect(
+    guestTripList.getByRole("checkbox", { name: "JR Pass" }),
+  ).toBeVisible();
+  await expect(
+    guestTripList.getByRole("checkbox", { name: "Passport" }),
+  ).not.toBeChecked();
+  await expect(guestTripList.getByRole("button")).toHaveCount(0);
+  await expect(guestPersonalList.getByRole("checkbox")).toHaveCount(0);
+  await guestPersonalList.getByLabel("New item").fill("Winter clothes");
+  await guestPersonalList.getByRole("button", { name: "Add item" }).click();
+  await guestPersonalList
+    .getByRole("checkbox", { name: "Winter clothes" })
+    .check();
+  await guestPersonalList
+    .getByRole("button", { name: "Remove Winter clothes" })
+    .click();
+  await expect(guestPersonalList.getByRole("checkbox")).toHaveCount(0);
+  await guestPage.close();
+  await page.reload();
+  await expect(
+    myList.getByRole("checkbox", { name: "Medication" }),
+  ).toBeChecked();
+  await tripList.getByRole("button", { name: "Remove JR Pass" }).click();
+  await expect(tripList.getByRole("checkbox", { name: "JR Pass" })).toHaveCount(
+    0,
+  );
+});
