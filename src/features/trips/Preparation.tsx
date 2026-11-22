@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { useRef, useState } from "preact/hooks";
 import { ActionIcon } from "../../shared/ActionIcon";
-import { Button } from "../../shared/ui/Button";
+import { IconButton } from "../../shared/ui/IconButton";
 import { supabase } from "../../shared/supabase/client";
 
 type Item = { id: string; title: string };
@@ -226,9 +226,7 @@ function Checklist({
                 <span>{item.title}</span>
               </label>
               {save && (
-                <Button
-                  type="button"
-                  svgOnly
+                <IconButton
                   appearance="tertiary"
                   disabled={busy}
                   aria-label={tr("Edit", "แก้ไข") + " " + item.title}
@@ -239,12 +237,10 @@ function Checklist({
                   }}
                 >
                   <ActionIcon kind="edit" />
-                </Button>
+                </IconButton>
               )}
               {remove && (
-                <Button
-                  type="button"
-                  svgOnly
+                <IconButton
                   appearance="tertiary"
                   disabled={busy}
                   aria-label={tr("Remove", "ลบ") + " " + item.title}
@@ -259,7 +255,7 @@ function Checklist({
                   }
                 >
                   <ActionIcon kind="remove" />
-                </Button>
+                </IconButton>
               )}
             </li>
           ))}
@@ -293,9 +289,8 @@ function Checklist({
               onInput={(event) => setDraft(event.currentTarget.value)}
             />
           </label>
-          <Button
+          <IconButton
             type="submit"
-            svgOnly
             aria-label={
               editing
                 ? tr("Save item", "บันทึกรายการ")
@@ -304,11 +299,9 @@ function Checklist({
             disabled={busy || !draft.trim()}
           >
             <ActionIcon kind={editing ? "save" : "add"} />
-          </Button>
+          </IconButton>
           {editing && (
-            <Button
-              type="button"
-              svgOnly
+            <IconButton
               appearance="tertiary"
               aria-label={tr("Cancel edit", "ยกเลิกการแก้ไข")}
               disabled={busy}
@@ -318,7 +311,7 @@ function Checklist({
               }}
             >
               <ActionIcon kind="cancel" />
-            </Button>
+            </IconButton>
           )}
         </form>
       )}

@@ -11,7 +11,7 @@ it("restores trigger focus when Escape arrives before passive opening effects", 
   try {
     render(
       <OverflowMenu
-        name="Activity"
+        label="Options for Activity"
         items={[{ label: "Edit", onSelect() {} }]}
       />,
       host,

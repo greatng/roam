@@ -1,5 +1,6 @@
 import { RoamLogo } from "../../shared/RoamLogo";
 import { Button } from "../../shared/ui/Button";
+import { IconButton } from "../../shared/ui/IconButton";
 import { ThemeChoice } from "../../shared/ui/ThemeChoice";
 import { revealEditor } from "../../shared/editor-navigation";
 import { GuestRecovery } from "./GuestRecovery";
@@ -309,10 +310,8 @@ export function App() {
           <ThemeToggle thai={thai.value} />
           {uid && (
             <div class="account-control" ref={accountControl}>
-              <Button
+              <IconButton
                 class="account-toggle"
-                type="button"
-                svgOnly
                 aria-label={
                   user?.is_anonymous
                     ? t("Guest account", "บัญชีผู้เยี่ยมชม")
@@ -337,7 +336,7 @@ export function App() {
                   <circle cx="12" cy="8" r="3.5" />
                   <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
                 </svg>
-              </Button>
+              </IconButton>
               {accountOpen && (
                 <section
                   id="account-panel"
@@ -724,7 +723,10 @@ export function App() {
                                     {" "}
                                     ·{" "}
                                     {m.can_edit_plan
-                                      ? t("Can edit itinerary", "แก้ไขแผนการเดินทางได้")
+                                      ? t(
+                                          "Can edit itinerary",
+                                          "แก้ไขแผนการเดินทางได้",
+                                        )
                                       : t("Read only", "ดูได้เท่านั้น")}
                                   </small>
                                 )}
@@ -1072,7 +1074,10 @@ export function App() {
               src={qr.image}
               width="280"
               height="280"
-              alt={t("Trip invitation QR code", "คิวอาร์โค้ดสำหรับเข้าร่วมทริป")}
+              alt={t(
+                "Trip invitation QR code",
+                "คิวอาร์โค้ดสำหรับเข้าร่วมทริป",
+              )}
             />
             <p>
               {t("Invitation code", "รหัสคำเชิญ")} <strong>{qr.code}</strong>

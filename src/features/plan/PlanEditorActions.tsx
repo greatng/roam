@@ -1,5 +1,5 @@
 import { ActionIcon } from "../../shared/ActionIcon";
-import { Button } from "../../shared/ui/Button";
+import { IconButton } from "../../shared/ui/IconButton";
 
 export function PlanEditorActions({
   saveLabel,
@@ -12,19 +12,16 @@ export function PlanEditorActions({
 }) {
   return (
     <div class="plan-editor-actions">
-      <Button
+      <IconButton
         type="submit"
-        svgOnly
         appearance="tertiary"
         class="plan-icon-button icon44"
         aria-label={saveLabel}
         title={saveLabel}
       >
         <ActionIcon kind="save" />
-      </Button>
-      <Button
-        type="button"
-        svgOnly
+      </IconButton>
+      <IconButton
         appearance="tertiary"
         class="plan-icon-button icon44"
         aria-label={cancelLabel}
@@ -32,7 +29,7 @@ export function PlanEditorActions({
         onClick={onCancel}
       >
         <ActionIcon kind="cancel" />
-      </Button>
+      </IconButton>
     </div>
   );
 }

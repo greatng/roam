@@ -5,6 +5,7 @@ import {
 } from "../plan/ActivityTag";
 import { Preparation } from "./Preparation";
 import { Button } from "../../shared/ui/Button";
+import { IconButton } from "../../shared/ui/IconButton";
 import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
 import { ReceiptDraftPicker } from "../expenses/receipts/ReceiptDraftPicker";
 import { useExpenseDraft } from "../expenses/useExpenseDraft";
@@ -14,6 +15,7 @@ import {
   listExpenseReceiptCleanups,
 } from "../expenses/receipts/api";
 import { OverflowMenu } from "../../shared/ui/OverflowMenu";
+import { TransportSelect } from "../plan/TransportSelect";
 import { ActionIcon } from "../../shared/ActionIcon";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
@@ -996,7 +998,10 @@ export function TripActivity({
       );
       if (amount <= 0n || amount > BigInt(Number.MAX_SAFE_INTEGER))
         throw new Error(
-          tr("Enter a valid supported amount.", "กรุณาตรวจสอบจำนวนเงินแล้วกรอกใหม่"),
+          tr(
+            "Enter a valid supported amount.",
+            "กรุณาตรวจสอบจำนวนเงินแล้วกรอกใหม่",
+          ),
         );
       const selected = approved
         .filter((m) => f.get(`share-${m.id}`) === "on")
@@ -1305,9 +1310,7 @@ export function TripActivity({
       ) : tab === "today" ? (
         <>
           <div class="day-browser">
-            <Button
-              type="button"
-              svgOnly
+            <IconButton
               appearance="tertiary"
               aria-label={tr("Previous day", "วันก่อนหน้า")}
               disabled={selectedDay <= trip.start_date}
@@ -1316,7 +1319,7 @@ export function TripActivity({
               <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
                 <path d="m15 18-6-6 6-6" />
               </svg>
-            </Button>
+            </IconButton>
             <label>
               <span>{tr("Itinerary date", "วันที่ในแผน")}</span>
               <input
@@ -1335,9 +1338,7 @@ export function TripActivity({
                 }
               />
             </label>
-            <Button
-              type="button"
-              svgOnly
+            <IconButton
               appearance="tertiary"
               aria-label={tr("Next day", "วันถัดไป")}
               disabled={selectedDay >= trip.end_date}
@@ -1346,7 +1347,7 @@ export function TripActivity({
               <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
                 <path d="m9 18 6-6-6-6" />
               </svg>
-            </Button>
+            </IconButton>
           </div>
           <h2 class="overview-day-heading">
             <time dateTime={selectedDay}>{dayLabel}</time>
@@ -1363,7 +1364,9 @@ export function TripActivity({
                   </p>
                 </>
               ) : today.state === "day-finished" ? (
-                <strong>{tr("Today is finished", "จบกิจกรรมของวันนี้แล้ว")}</strong>
+                <strong>
+                  {tr("Today is finished", "จบกิจกรรมของวันนี้แล้ว")}
+                </strong>
               ) : null}
               {current && !chosenStopId && !senior && (
                 <>
@@ -1459,7 +1462,6 @@ export function TripActivity({
                   <strong>{selectedStay.name}</strong>
                   {canEditPlan && !senior && (
                     <OverflowMenu
-                      name={selectedStay.name}
                       label={tr(
                         `Options for ${selectedStay.name}`,
                         `ตัวเลือกสำหรับ ${selectedStay.name}`,
@@ -1580,9 +1582,7 @@ export function TripActivity({
                   </a>
                   {canEditPlan && !senior && (
                     <>
-                      <Button
-                        type="button"
-                        svgOnly
+                      <IconButton
                         appearance="tertiary"
                         class="plan-icon-button"
                         aria-label={tr("Edit stop", "แก้ไขจุดหมาย")}
@@ -1601,10 +1601,8 @@ export function TripActivity({
                         }}
                       >
                         <ActionIcon kind="edit" />
-                      </Button>
-                      <Button
-                        type="button"
-                        svgOnly
+                      </IconButton>
+                      <IconButton
                         appearance="tertiary"
                         class="plan-icon-button danger"
                         aria-label={tr("Delete stop", "ลบจุดหมาย")}
@@ -1612,7 +1610,7 @@ export function TripActivity({
                         onClick={() => void deleteItem(item)}
                       >
                         <ActionIcon kind="remove" />
-                      </Button>
+                      </IconButton>
                     </>
                   )}
                 </article>
@@ -1716,40 +1714,11 @@ export function TripActivity({
                   </label>
                   <label>
                     {tr("Transport", "การเดินทาง")}
-                    <select
-                      name="transport"
-                      defaultValue={editing?.transport_mode ?? ""}
-                    >
-                      <option value="">
-                        {tr("Choose (optional)", "เลือก (ไม่บังคับ)")}
-                      </option>
-                      {[
-                        "walk",
-                        "car",
-                        "taxi",
-                        "bus",
-                        "train",
-                        "boat",
-                        "other",
-                      ].map((x) => (
-                        <option value={x}>
-                          {tr(
-                            x,
-                            (
-                              {
-                                walk: "เดิน",
-                                car: "รถยนต์",
-                                taxi: "แท็กซี่",
-                                bus: "รถบัส",
-                                train: "รถไฟ",
-                                boat: "เรือ",
-                                other: "อื่น ๆ",
-                              } as Record<string, string>
-                            )[x],
-                          )}
-                        </option>
-                      ))}
-                    </select>
+                    <TransportSelect
+                      editor="stop"
+                      value={editing?.transport_mode ?? ""}
+                      thai={thai}
+                    />
                   </label>
                   <ActivityTagField
                     key={editing?.id ?? "new"}
@@ -2014,8 +1983,8 @@ export function TripActivity({
             receiptCleanupsQuery.data?.map((cleanup) => (
               <div class="pending" key={cleanup.id}>
                 <p>
-                  {tr("Receipt cleanup pending", "รูปใบเสร็จที่ยังลบไม่สำเร็จ")}:{" "}
-                  {cleanup.description}
+                  {tr("Receipt cleanup pending", "รูปใบเสร็จที่ยังลบไม่สำเร็จ")}
+                  : {cleanup.description}
                 </p>
                 <Button
                   type="button"
@@ -2127,9 +2096,7 @@ export function TripActivity({
                   </details>
                 ) : null}
                 {organizer && !senior && trip.status === "active" && (
-                  <Button
-                    type="button"
-                    svgOnly
+                  <IconButton
                     appearance="tertiary"
                     class="danger"
                     aria-label={tr("Delete expense", "ลบค่าใช้จ่าย")}
@@ -2138,7 +2105,7 @@ export function TripActivity({
                     onClick={() => void deleteExpense(e)}
                   >
                     <ActionIcon kind="remove" />
-                  </Button>
+                  </IconButton>
                 )}
                 <ReceiptAttachment
                   expenseId={e.id}

@@ -1620,7 +1620,7 @@ button.overflow-trigger {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .itinerary-fab button,
+  button.itinerary-fab,
   .overflow-trigger,
   .overflow-panel button {
     transition: none;

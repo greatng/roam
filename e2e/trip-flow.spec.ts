@@ -2825,6 +2825,8 @@ test.describe("Daily itinerary browser regressions", () => {
     await expect(activity.getByRole("menu")).toHaveCount(0);
 
     const fab = itinerary.getByRole("button", { name: "Edit itinerary" });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(fab).toHaveCSS("transition-duration", "0s");
     await itinerary
       .locator(".plan-night")
       .first()
@@ -2836,8 +2838,19 @@ test.describe("Daily itinerary browser regressions", () => {
         path: "artifacts/mobile-chromium-itinerary-viewport-fixture-preview.png",
       });
     }
-    await fab.click();
     const actions = itinerary.getByRole("menu", { name: "Itinerary actions" });
+    await fab.press("ArrowUp");
+    await expect(
+      actions.getByRole("menuitem", { name: "Add accommodation" }),
+    ).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(
+      actions.getByRole("menuitem", { name: "Add activity" }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(actions).toHaveCount(0);
+    await expect(fab).toBeFocused();
+    await fab.click();
     await expect(actions).toBeInViewport({ ratio: 1 });
     await expect(
       actions.getByRole("menuitem", { name: "Add activity" }),
