@@ -1,3 +1,11 @@
+import {
+  ActivityTagBadge,
+  ActivityTagField,
+  activityTagLabel,
+  type ActivityTag,
+} from "./ActivityTag";
+import { ItineraryExport } from "./ItineraryExport";
+import type { PdfDay, PdfLine } from "./itinerary-pdf";
 import { Button } from "../../shared/ui/Button";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
@@ -45,6 +53,7 @@ type Activity = {
   address: string | null;
   meeting_info: string | null;
   notes: string | null;
+  activity_tag?: ActivityTag | null;
   transport_mode: string | null;
   position: number;
   version: number;
@@ -375,8 +384,9 @@ export function Plan({
             "วันที่กิจกรรมต้องอยู่ในช่วงทริป",
           ),
         );
-      const { error } = await supabase.rpc("upsert_itinerary_item", {
+      const { error } = await supabase.rpc("upsert_tagged_itinerary_item", {
         p_trip_id: trip.id,
+        p_activity_tag: f.get("activityTag") || null,
         p_title: f.get("title"),
         p_starts_at: raw
           ? tripWallTimeToIso(`${activityDate}T${raw}`, destinationTimezone)
@@ -439,6 +449,51 @@ export function Plan({
   })();
   const rows = nights.data ?? [];
   const activitiesByDate = activities.data ?? [];
+  function buildPdfDays(): PdfDay[] {
+    return dates.map((date) => {
+      const lines: PdfLine[] = [];
+      const night = rows.find((item) => item.night_date === date);
+      const stay = stayForDate(stays.data ?? [], date);
+      if (night) {
+        lines.push({ text: night.city, style: "day" });
+        if (night.transport_mode)
+          lines.push({ text: tLabel(night.transport_mode, thai) });
+      }
+      if (stay) {
+        lines.push({ text: t("Accommodation", "ที่พัก") + " · " + stay.name });
+        for (const text of [stay.address, stay.phone])
+          if (text) lines.push({ text });
+      }
+      const dayActivities = activitiesByDate.filter(
+        (activity) =>
+          activityDestinationDate(activity, destinationTimezone) === date,
+      );
+      if (!dayActivities.length) lines.push({ text: t("Free day", "วันว่าง") });
+      for (const activity of dayActivities) {
+        const time = activity.starts_at
+          ? new Date(activity.starts_at).toLocaleTimeString(locale, {
+              timeZone: destinationTimezone,
+              timeStyle: "short",
+            })
+          : "";
+        lines.push({
+          text: [time, activity.title].filter(Boolean).join(" · "),
+          style: "stop",
+        });
+        const tag = activityTagLabel(activity.activity_tag, thai);
+        if (tag) lines.push({ text: tag, style: "tag" });
+        if (activity.transport_mode)
+          lines.push({ text: tLabel(activity.transport_mode, thai) });
+        for (const text of [
+          activity.address,
+          activity.meeting_info,
+          activity.notes,
+        ])
+          if (text) lines.push({ text });
+      }
+      return { title: formatDateLabel(date, locale), lines };
+    });
+  }
   useEffect(() => {
     if (nightForm) setReplaceRange(false);
   }, [nightForm]);
@@ -480,6 +535,31 @@ export function Plan({
           )}
         </p>
       )}
+      <ItineraryExport
+        key={JSON.stringify([
+          trip.id,
+          trip.title,
+          trip.start_date,
+          trip.end_date,
+          trip.timezone,
+          thai,
+          nights.dataUpdatedAt,
+          stays.dataUpdatedAt,
+          activities.dataUpdatedAt,
+          nights.isError,
+          stays.isError,
+          activities.isError,
+        ])}
+        title={trip.title}
+        thai={thai}
+        ready={
+          dates.length > 0 &&
+          nights.isSuccess &&
+          stays.isSuccess &&
+          activities.isSuccess
+        }
+        buildDays={buildPdfDays}
+      />
       <nav
         class="plan-view-toggle"
         aria-label={t("Itinerary view", "มุมมองแผนการเดินทาง")}
@@ -652,6 +732,10 @@ export function Plan({
                             </time>
                           )}
                           <strong>{activity.title}</strong>
+                          <ActivityTagBadge
+                            tag={activity.activity_tag}
+                            thai={thai}
+                          />
                           {organizer && (
                             <OverflowMenu
                               label={t(
@@ -1189,6 +1273,11 @@ export function Plan({
                 t={t}
               />
             </label>
+            <ActivityTagField
+              key={activityForm?.id ?? "new"}
+              tag={activityForm?.activity_tag}
+              thai={thai}
+            />
             <Button
               type="submit"
               svgOnly

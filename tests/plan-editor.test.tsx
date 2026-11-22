@@ -239,7 +239,7 @@ describe("Plan editors", () => {
 
     await waitFor(() =>
       expect(fixtures.rpc).toHaveBeenCalledWith(
-        "upsert_itinerary_item",
+        "upsert_tagged_itinerary_item",
         expect.objectContaining({
           p_item_id: "activity-1",
           p_expected_version: 4,

@@ -1,3 +1,8 @@
+import {
+  ActivityTagBadge,
+  ActivityTagField,
+  type ActivityTag,
+} from "../plan/ActivityTag";
 import { Preparation } from "./Preparation";
 import { Button } from "../../shared/ui/Button";
 import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
@@ -81,6 +86,7 @@ type Item = {
   longitude: number | null;
   meeting_info: string | null;
   notes: string | null;
+  activity_tag?: ActivityTag | null;
   transport_mode: string | null;
   position: number;
   version: number;
@@ -293,6 +299,7 @@ export function TripActivity({
     else if (button.right > viewport.right)
       row.scrollLeft += button.right - viewport.right;
   }, [tab, senior]);
+  const revealExpenseOnOpen = useRef(false);
   const expenseDateEdited = useRef(false);
   useEffect(() => {
     if (expenseDraft.restored) {
@@ -714,8 +721,9 @@ export function TripActivity({
       );
       return;
     }
-    const { error } = await supabase.rpc("upsert_itinerary_item", {
+    const { error } = await supabase.rpc("upsert_tagged_itinerary_item", {
       p_trip_id: trip.id,
+      p_activity_tag: f.get("activityTag") || null,
       p_title: f.get("title"),
       p_starts_at: starts,
       p_address: f.get("address") || null,
@@ -1368,7 +1376,10 @@ export function TripActivity({
                       )}
                     </strong>
                   )}
-                  <h3>{heroStop.title}</h3>
+                  <h3>
+                    {heroStop.title}{" "}
+                    <ActivityTagBadge tag={heroStop.activity_tag} thai={thai} />
+                  </h3>
                   <p>
                     {heroStop.starts_at
                       ? new Date(heroStop.starts_at).toLocaleString(
@@ -1509,6 +1520,7 @@ export function TripActivity({
                   <div>
                     <span class="stop-number">{index + 1}</span>
                     <strong>{item.title}</strong>
+                    <ActivityTagBadge tag={item.activity_tag} thai={thai} />
                   </div>
                   {item.starts_at && (
                     <p>
@@ -1574,155 +1586,160 @@ export function TripActivity({
                   )}
                 </article>
               ))}
-              {canEditPlan && !senior && (
-                <details
-                  class="stop-editor"
-                  ref={stopEditor}
-                  open={stopEditorOpen}
-                  onToggle={(event) => {
-                    setStopEditorOpen(event.currentTarget.open);
-                    revealOpenEditor(event);
-                  }}
+            </>
+          )}
+          {canEditPlan &&
+            !senior &&
+            !itineraryQuery.isPending &&
+            (!itineraryQuery.isError || items.length > 0) && (
+              <details
+                class="stop-editor"
+                ref={stopEditor}
+                open={stopEditorOpen}
+                onToggle={(event) => {
+                  setStopEditorOpen(event.currentTarget.open);
+                  revealOpenEditor(event);
+                }}
+              >
+                <summary>
+                  {editing
+                    ? tr("Edit stop", "แก้ไขจุดหมาย")
+                    : tr("Add a stop", "เพิ่มจุดหมาย")}
+                </summary>
+                <form
+                  class="editor-panel"
+                  tabIndex={-1}
+                  key={editing?.id ?? "new-stop"}
+                  onSubmit={saveItem}
                 >
-                  <summary>
+                  <h3>
                     {editing
                       ? tr("Edit stop", "แก้ไขจุดหมาย")
                       : tr("Add a stop", "เพิ่มจุดหมาย")}
-                  </summary>
-                  <form
-                    class="editor-panel"
-                    tabIndex={-1}
-                    key={editing?.id ?? "new-stop"}
-                    onSubmit={saveItem}
-                  >
-                    <h3>
-                      {editing
-                        ? tr("Edit stop", "แก้ไขจุดหมาย")
-                        : tr("Add a stop", "เพิ่มจุดหมาย")}
-                    </h3>
-                    <label>
-                      {tr("Place or activity", "สถานที่หรือกิจกรรม")}
-                      <input
-                        required
-                        name="title"
-                        maxLength={160}
-                        defaultValue={editing?.title}
-                      />
-                    </label>
-                    <label>
-                      {tr("Day", "วันที่")}
-                      <input
-                        name="date"
-                        type="date"
-                        min={trip.start_date}
-                        max={trip.end_date}
-                        defaultValue={
-                          editing?.starts_at
-                            ? toTripLocal(
-                                editing.starts_at,
-                                destinationTimezone,
-                              ).slice(0, 10)
-                            : (editing?.plan_date ?? selectedDay)
-                        }
-                      />
-                    </label>
-                    <label>
-                      {tr(
-                        "Activity time (optional)",
-                        "เวลากิจกรรม (ไม่บังคับ)",
-                      )}
-                      <input
-                        name="time"
-                        type="time"
-                        defaultValue={
-                          editing?.starts_at
-                            ? toTripLocal(
-                                editing.starts_at,
-                                destinationTimezone,
-                              ).slice(11)
-                            : ""
-                        }
-                      />
-                    </label>
+                  </h3>
+                  <label>
+                    {tr("Place or activity", "สถานที่หรือกิจกรรม")}
+                    <input
+                      required
+                      name="title"
+                      maxLength={160}
+                      defaultValue={editing?.title}
+                    />
+                  </label>
+                  <label>
+                    {tr("Day", "วันที่")}
+                    <input
+                      name="date"
+                      type="date"
+                      min={trip.start_date}
+                      max={trip.end_date}
+                      defaultValue={
+                        editing?.starts_at
+                          ? toTripLocal(
+                              editing.starts_at,
+                              destinationTimezone,
+                            ).slice(0, 10)
+                          : (editing?.plan_date ?? selectedDay)
+                      }
+                    />
+                  </label>
+                  <label>
+                    {tr("Activity time (optional)", "เวลากิจกรรม (ไม่บังคับ)")}
+                    <input
+                      name="time"
+                      type="time"
+                      defaultValue={
+                        editing?.starts_at
+                          ? toTripLocal(
+                              editing.starts_at,
+                              destinationTimezone,
+                            ).slice(11)
+                          : ""
+                      }
+                    />
+                  </label>
 
-                    <label>
-                      {tr("Address", "ที่อยู่")}
-                      <input
-                        name="address"
-                        maxLength={500}
-                        defaultValue={editing?.address ?? ""}
-                      />
-                    </label>
-                    <label>
-                      {tr("Meeting point", "จุดนัดพบ")}
-                      <input
-                        name="meeting"
-                        maxLength={300}
-                        defaultValue={editing?.meeting_info ?? ""}
-                      />
-                    </label>
-                    <label>
-                      {tr("Notes", "หมายเหตุ")}
-                      <textarea
-                        name="notes"
-                        maxLength={1000}
-                        defaultValue={editing?.notes ?? ""}
-                      />
-                    </label>
-                    <label>
-                      {tr("Transport", "การเดินทาง")}
-                      <select
-                        name="transport"
-                        defaultValue={editing?.transport_mode ?? ""}
-                      >
-                        <option value="">
-                          {tr("Choose (optional)", "เลือก (ไม่บังคับ)")}
+                  <label>
+                    {tr("Address", "ที่อยู่")}
+                    <input
+                      name="address"
+                      maxLength={500}
+                      defaultValue={editing?.address ?? ""}
+                    />
+                  </label>
+                  <label>
+                    {tr("Meeting point", "จุดนัดพบ")}
+                    <input
+                      name="meeting"
+                      maxLength={300}
+                      defaultValue={editing?.meeting_info ?? ""}
+                    />
+                  </label>
+                  <label>
+                    {tr("Notes", "หมายเหตุ")}
+                    <textarea
+                      name="notes"
+                      maxLength={1000}
+                      defaultValue={editing?.notes ?? ""}
+                    />
+                  </label>
+                  <label>
+                    {tr("Transport", "การเดินทาง")}
+                    <select
+                      name="transport"
+                      defaultValue={editing?.transport_mode ?? ""}
+                    >
+                      <option value="">
+                        {tr("Choose (optional)", "เลือก (ไม่บังคับ)")}
+                      </option>
+                      {[
+                        "walk",
+                        "car",
+                        "taxi",
+                        "bus",
+                        "train",
+                        "boat",
+                        "other",
+                      ].map((x) => (
+                        <option value={x}>
+                          {tr(
+                            x,
+                            (
+                              {
+                                walk: "เดิน",
+                                car: "รถยนต์",
+                                taxi: "แท็กซี่",
+                                bus: "รถบัส",
+                                train: "รถไฟ",
+                                boat: "เรือ",
+                                other: "อื่น ๆ",
+                              } as Record<string, string>
+                            )[x],
+                          )}
                         </option>
-                        {[
-                          "walk",
-                          "car",
-                          "taxi",
-                          "bus",
-                          "train",
-                          "boat",
-                          "other",
-                        ].map((x) => (
-                          <option value={x}>
-                            {tr(
-                              x,
-                              (
-                                {
-                                  walk: "เดิน",
-                                  car: "รถยนต์",
-                                  taxi: "แท็กซี่",
-                                  bus: "รถบัส",
-                                  train: "รถไฟ",
-                                  boat: "เรือ",
-                                  other: "อื่น ๆ",
-                                } as Record<string, string>
-                              )[x],
-                            )}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <Button>{tr("Save stop", "บันทึกจุดหมาย")}</Button>
-                    {editing && (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setEditing(null);
-                          setStopEditorOpen(false);
-                        }}
-                      >
-                        {tr("Cancel", "ยกเลิก")}
-                      </Button>
-                    )}
-                  </form>
-                </details>
-              )}
-            </>
-          )}
+                      ))}
+                    </select>
+                  </label>
+                  <ActivityTagField
+                    key={editing?.id ?? "new"}
+                    tag={editing?.activity_tag}
+                    thai={thai}
+                  />
+                  <Button>{tr("Save stop", "บันทึกจุดหมาย")}</Button>
+                  {editing && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setEditing(null);
+                        setStopEditorOpen(false);
+                      }}
+                    >
+                      {tr("Cancel", "ยกเลิก")}
+                    </Button>
+                  )}
+                </form>
+              </details>
+            )}
         </>
       ) : tab === "expenses" ? (
         <>
@@ -1743,10 +1760,16 @@ export function TripActivity({
                   dateInput.value = dateInput.defaultValue;
                 }
               }
-              revealOpenEditor(event);
+              if (revealExpenseOnOpen.current) revealOpenEditor(event);
+              revealExpenseOnOpen.current = false;
             }}
           >
-            <summary>
+            <summary
+              onClick={(event) => {
+                revealExpenseOnOpen.current =
+                  !event.currentTarget.closest("details")?.open;
+              }}
+            >
               {tr("Add shared expense", "เพิ่มค่าใช้จ่ายส่วนกลาง")}
             </summary>
             <h3>{tr("Add shared expense", "เพิ่มค่าใช้จ่ายส่วนกลาง")}</h3>
