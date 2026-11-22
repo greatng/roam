@@ -3588,3 +3588,47 @@ test("Preparation shares item names and keeps checkmarks and private lists per t
     0,
   );
 });
+
+test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 650 });
+  await installFixture(page);
+  await page.goto("/");
+  await openTrip(page);
+  const nav = page.getByRole("navigation", { name: "Trip sections" });
+  const buttons = nav.getByRole("button");
+  await expect(buttons).toHaveText([
+    "Overview",
+    "Itinerary",
+    "Expenses",
+    "Preparation",
+    "Trip",
+  ]);
+  expect(
+    await nav.evaluate((row) => ({
+      scrollable: row.scrollWidth > row.clientWidth,
+      rows: new Set(
+        Array.from(
+          row.querySelectorAll("button"),
+          (button) => button.offsetTop,
+        ),
+      ).size,
+      pageFits: document.documentElement.scrollWidth <= innerWidth,
+    })),
+  ).toEqual({ scrollable: true, rows: 1, pageFits: true });
+
+  await buttons.first().focus();
+  for (const label of ["Itinerary", "Expenses", "Preparation", "Trip"]) {
+    await page.keyboard.press("Tab");
+    await expect(
+      nav.getByRole("button", { name: label, exact: true }),
+    ).toBeFocused();
+  }
+  await page.keyboard.press("Enter");
+  await page.reload();
+  await expect(
+    nav.getByRole("button", { name: "Trip", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect
+    .poll(() => nav.evaluate((row) => row.scrollLeft))
+    .toBeGreaterThan(0);
+});
