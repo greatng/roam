@@ -3689,6 +3689,7 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: testInfo.outputPath(`trip-navigation-${theme}.png`),
+      animations: "disabled",
     });
   }
 
