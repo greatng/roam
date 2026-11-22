@@ -450,7 +450,7 @@ details > summary {
   }
   .activity-tabs {
     position: sticky;
-    top: 68px;
+    top: var(--app-header-height, 68px);
     z-index: 3;
   }
   section,

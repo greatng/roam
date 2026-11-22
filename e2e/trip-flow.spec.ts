@@ -3709,12 +3709,17 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
     await expect
       .poll(() => nav.evaluate((row) => row.scrollLeft))
       .toBeGreaterThan(0);
+    // Wider controls can wrap the sticky app header on a narrow screen.
+    await page.addStyleTag({ content: "header { column-gap: 2rem; }" });
     await page.evaluate(() => window.scrollBy(0, 500));
-    const appHeader = await page.locator("header").boundingBox();
-    const stickyRow = await nav.boundingBox();
-    expect(stickyRow!.y).toBeGreaterThanOrEqual(
-      appHeader!.y + appHeader!.height,
-    );
+    await expect
+      .poll(async () => {
+        const header = (await page.getByRole("banner").boundingBox())!;
+        const row = (await nav.boundingBox())!;
+        const gap = row.y - (header.y + header.height);
+        return header.height > 68 && gap >= 0 && gap <= 1;
+      })
+      .toBe(true);
   }
 });
 

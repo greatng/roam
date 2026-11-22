@@ -13,7 +13,7 @@ import { addCalendarDays } from "../plan/dates";
 import { redeem } from "../invites/redeem";
 import { removeTripReceiptFiles } from "../expenses/receipts/storage";
 
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import { QueryClient, useQuery } from "@tanstack/preact-query";
 import QRCode from "qrcode";
@@ -75,6 +75,23 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutWarning, setSignOutWarning] = useState(false);
   const accountControl = useRef<HTMLDivElement>(null);
+  const appHeader = useRef<HTMLElement>(null);
+  const appMain = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const header = appHeader.current;
+    const main = appMain.current;
+    if (!header || !main || typeof ResizeObserver === "undefined") return;
+    const updateHeaderHeight = () => {
+      main.style.setProperty(
+        "--app-header-height",
+        `${Math.ceil(header.getBoundingClientRect().height)}px`,
+      );
+    };
+    updateHeaderHeight();
+    const observer = new ResizeObserver(updateHeaderHeight);
+    observer.observe(header, { box: "border-box" });
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (!accountOpen) return;
     function close() {
@@ -275,7 +292,7 @@ export function App() {
   }
   return (
     <>
-      <header>
+      <header ref={appHeader}>
         <a href="#/trips" aria-label="Roam" onClick={() => selectTrip(null)}>
           <RoamLogo />
         </a>
@@ -392,7 +409,7 @@ export function App() {
         </div>
       </header>
       <PwaUpdate thai={thai.value} />
-      <main>
+      <main ref={appMain}>
         <h1>{t("Your trips, together.", "เดินทางไปด้วยกัน")}</h1>
         {error && <p role="alert">{error}</p>}
         {(trips.error || members.error || requests.error || invites.error) && (
