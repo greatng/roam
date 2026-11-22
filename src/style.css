@@ -1676,3 +1676,45 @@ button.itinerary-fab {
 
 /* Compact, font-independent #R brand mark. */
 .roam-logo { display: block; width: 64px; height: 44px; }
+
+.preparation {
+  display: grid;
+  gap: 0.75rem;
+}
+.preparation-items {
+  display: grid;
+  gap: 0.25rem;
+  list-style: none;
+  padding: 0;
+}
+.preparation-items li,
+.preparation-form {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.preparation-items label,
+.preparation-form label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.preparation-items label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.preparation-items input {
+  flex: none;
+  margin: 0;
+}
+.preparation-form {
+  align-items: end;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}

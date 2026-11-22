@@ -1,3 +1,4 @@
+import { Preparation } from "./Preparation";
 import { Button } from "../../shared/ui/Button";
 import { ReceiptAttachment } from "../expenses/receipts/ReceiptAttachment";
 import { ReceiptDraftPicker } from "../expenses/receipts/ReceiptDraftPicker";
@@ -247,12 +248,15 @@ export function TripActivity({
   const me = approved.find((m) => m.user_id === uid);
   const organizer = me?.role === "organizer";
   const canEditPlan = organizer || me?.can_edit_plan === true;
-  type TripTab = "today" | "plan" | "expenses" | "trip";
+  type TripTab = "today" | "plan" | "expenses" | "preparation" | "trip";
   const tabKey = `roam-trip-tab:${uid}:${trip.id}`;
   function readTab(): TripTab {
     try {
       const value = sessionStorage.getItem(tabKey);
-      return value === "plan" || value === "expenses" || value === "trip"
+      return value === "plan" ||
+        value === "expenses" ||
+        value === "preparation" ||
+        value === "trip"
         ? value
         : "today";
     } catch {
@@ -1200,6 +1204,13 @@ export function TripActivity({
           )}
           <Button
             type="button"
+            aria-current={tab === "preparation" ? "page" : undefined}
+            onClick={() => setTab("preparation")}
+          >
+            {tr("Preparation", "เตรียมตัว")}
+          </Button>
+          <Button
+            type="button"
             aria-current={tab === "expenses" ? "page" : undefined}
             onClick={() => setTab("expenses")}
           >
@@ -1223,7 +1234,15 @@ export function TripActivity({
         />
       )}
       {tab === "trip" && !senior && tripSettings}
-      {tab === "plan" ? (
+      {tab === "preparation" && !senior ? (
+        <Preparation
+          key={JSON.stringify([uid, trip.id])}
+          tripId={trip.id}
+          uid={uid}
+          organizer={organizer}
+          thai={thai}
+        />
+      ) : tab === "plan" ? (
         <Plan
           trip={trip}
           uid={uid}

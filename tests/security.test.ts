@@ -398,3 +398,93 @@ test("reusable invitations share destination-date expiry and preserve requests a
     await db.close();
   }
 }, 30000);
+
+test("shared preparation items are readable by approved members and writable only by organizers", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      `create role anon; create role authenticated; create role service_role;
+       create schema auth; create table auth.users(id uuid primary key);
+       create function auth.uid() returns uuid language sql as $$
+         select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
+       $$;`,
+    );
+    for (const migration of [
+      "202610280001_foundation.sql",
+      "20261122053339_trip_preparation_items.sql",
+    ])
+      await db.exec(readFileSync("supabase/migrations/" + migration, "utf8"));
+    const organizer = "00000000-0000-4000-8000-000000000011";
+    const guest = "00000000-0000-4000-8000-000000000012";
+    const outsider = "00000000-0000-4000-8000-000000000013";
+    await db.exec(`insert into auth.users values ('${organizer}'), ('${guest}'), ('${outsider}');
+      set role authenticated; set request.jwt.claim.sub='${organizer}';`);
+    const {
+      rows: [{ id: trip }],
+    } = await db.query<{ id: string }>(
+      "select create_trip('Japan','Organizer','UTC','JPY','2099-12-01','2099-12-31') as id",
+    );
+    await db.exec(`reset role; insert into trip_members(trip_id, user_id, display_name, role, status)
+      values ('${trip}', '${guest}', 'Guest', 'member', 'approved');
+      set role authenticated; set request.jwt.claim.sub='${organizer}';`);
+    const {
+      rows: [{ id }],
+    } = await db.query<{ id: string }>(
+      "insert into trip_preparation_items(trip_id,title) values ($1,'Passport') returning id",
+      [trip],
+    );
+    await db.exec(`set request.jwt.claim.sub='${guest}';`);
+    expect(
+      (await db.query("select title from trip_preparation_items")).rows,
+    ).toEqual([{ title: "Passport" }]);
+    await expect(
+      db.query(
+        "insert into trip_preparation_items(trip_id,title) values ($1,'JR Pass')",
+        [trip],
+      ),
+    ).rejects.toThrow();
+    expect(
+      (
+        await db.query(
+          "update trip_preparation_items set title='Winter clothes' where id=$1 returning id",
+          [id],
+        )
+      ).rows,
+    ).toEqual([]);
+    expect(
+      (
+        await db.query(
+          "delete from trip_preparation_items where id=$1 returning id",
+          [id],
+        )
+      ).rows,
+    ).toEqual([]);
+    await db.exec(`set request.jwt.claim.sub='${outsider}';`);
+    expect(
+      (await db.query("select id from trip_preparation_items")).rows,
+    ).toEqual([]);
+    await db.exec(`set request.jwt.claim.sub='${organizer}';`);
+    expect(
+      (
+        await db.query(
+          "update trip_preparation_items set title='Driver license' where id=$1 returning id",
+          [id],
+        )
+      ).rows,
+    ).toEqual([{ id }]);
+    expect(
+      (
+        await db.query(
+          "delete from trip_preparation_items where id=$1 returning id",
+          [id],
+        )
+      ).rows,
+    ).toEqual([{ id }]);
+    await db.exec("reset role; set role anon;");
+    await expect(
+      db.query("select id from trip_preparation_items"),
+    ).rejects.toThrow();
+  } finally {
+    await db.close();
+  }
+}, 30000);
