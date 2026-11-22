@@ -294,3 +294,95 @@ test("itinerary, check-in, expense and settlement RPCs enforce trip scope and id
   }
   await db.close();
 }, 30000);
+
+test("reusable invitations share destination-date expiry and preserve requests after rotation", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      `create role anon; create role authenticated; create role service_role;
+       create schema auth; create table auth.users(id uuid primary key);
+       create function auth.uid() returns uuid language sql as $$
+         select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
+       $$;`,
+    );
+    for (const migration of [
+      "202610280001_foundation.sql",
+      "20261122042959_reusable_trip_invitations.sql",
+    ]) {
+      await db.exec(readFileSync("supabase/migrations/" + migration, "utf8"));
+    }
+    const organizer = "00000000-0000-4000-8000-000000000001";
+    const guests = [
+      "00000000-0000-4000-8000-000000000002",
+      "00000000-0000-4000-8000-000000000003",
+    ];
+    await db.exec(
+      `insert into auth.users values ('${organizer}'), ('${guests[0]}'), ('${guests[1]}');
+       set role authenticated; set request.jwt.claim.sub='${organizer}';`,
+    );
+    const {
+      rows: [{ id: trip }],
+    } = await db.query<{ id: string }>(
+      "select create_trip('Test','Organizer','Asia/Bangkok','THB','2099-12-01','2099-12-31') as id",
+    );
+    const create = () =>
+      db.query<{ id: string; token: string }>(
+        "select * from create_reusable_invite($1,'2099-12-31')",
+        [trip],
+      );
+    const {
+      rows: [invite],
+    } = await create();
+    expect(invite.token).toMatch(/^[0-9a-f]{16}$/);
+    await db.exec(`set request.jwt.claim.sub='${guests[0]}'`);
+    await expect(create()).rejects.toThrow();
+    await db.exec("reset role");
+    const redeem = (token: string, guest: string) =>
+      db
+        .query<{
+          result: { request_id?: string; status?: string; error?: string };
+        }>(
+          "select invite_gateway(encode(sha256(convert_to($1,'UTF8')),'hex'),repeat('a',64),$2,'Traveler') as result",
+          [token, guest],
+        )
+        .then(({ rows }) => rows[0].result);
+    const first = await redeem(invite.token, guests[0]);
+    expect(first.status).toBe("pending");
+    expect(await redeem(invite.token, guests[0])).toEqual(first);
+    expect((await redeem(invite.token, guests[1])).status).toBe("pending");
+    expect(
+      (
+        await db.query(
+          "select uses_count, max_uses, expires_at = '2099-12-31 17:00Z'::timestamptz as correct_expiry from trip_invites where id = $1",
+          [invite.id],
+        )
+      ).rows,
+    ).toEqual([{ uses_count: 2, max_uses: null, correct_expiry: true }]);
+
+    await db.exec(
+      `set role authenticated; set request.jwt.claim.sub='${organizer}';`,
+    );
+    const {
+      rows: [replacement],
+    } = await create();
+    await db.exec("reset role");
+    expect((await redeem(invite.token, guests[0])).error).toBe(
+      "invalid_invite",
+    );
+    expect(await redeem(replacement.token, guests[0])).toEqual(first);
+    await db.query("update trip_invites set expires_at = now() where id = $1", [
+      replacement.id,
+    ]);
+    expect((await redeem(replacement.token, guests[0])).error).toBe(
+      "invalid_invite",
+    );
+    await db.exec("set role authenticated");
+    await db.query("select decide_join($1,true)", [first.request_id]);
+    await db.exec(`set request.jwt.claim.sub='${guests[0]}'`);
+    expect(
+      (await db.query("select id from trips where id = $1", [trip])).rows,
+    ).toHaveLength(1);
+  } finally {
+    await db.close();
+  }
+}, 30000);

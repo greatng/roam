@@ -4,7 +4,7 @@
 
 On 2026-11-14 the configured project returned HTTP 404 with `code: NOT_FOUND` and `message: Requested function was not found` for an OPTIONS request to `https://bsuzmybuskeadtofvjbz.supabase.co/functions/v1/invite-gateway` from origin `https://roam.greatng.me`.
 
-QR generation calls the database `create_invite` RPC. Joining on a new device additionally calls the `invite-gateway` Edge Function before creating an anonymous session. A working QR image therefore does not establish that joining is deployed.
+Reusable invitation creation calls the database `create_reusable_invite` RPC. Apply [the reusable invitation migration](../supabase/migrations/20261122042959_reusable_trip_invitations.sql) and deploy the updated gateway before publishing the updated frontend. Joining on a new device additionally calls the `invite-gateway` Edge Function before creating an anonymous session. A working QR image therefore does not establish that joining is deployed.
 
 ## Supabase Dashboard setup (no Docker required)
 

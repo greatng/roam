@@ -55,9 +55,18 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [qr, setQr] = useState("");
+  const [qr, setQr] = useState<{
+    image: string;
+    code: string;
+    link: string;
+  } | null>(null);
   const qrPanel = useRef<HTMLElement>(null);
   const [route, setRoute] = useState(location.hash);
+  const [invitationError, setInvitationError] = useState<
+    "empty" | "invalid" | null
+  >(null);
+  const joinHeading = useRef<HTMLHeadingElement>(null);
+  const focusJoinAfterPaste = useRef(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutWarning, setSignOutWarning] = useState(false);
@@ -66,13 +75,19 @@ export function App() {
     if (qr) revealEditor(qrPanel.current);
   }, [qr]);
   useEffect(() => {
+    if (focusJoinAfterPaste.current && joinHeading.current) {
+      focusJoinAfterPaste.current = false;
+      revealEditor(joinHeading.current);
+    }
+  }, [route]);
+  useEffect(() => {
     setSelectedId(
       uid ? localStorage.getItem(`paikan-selected-trip:${uid}`) : null,
     );
   }, [uid]);
   function selectTrip(id: string | null) {
     setSelectedId(id);
-    setQr("");
+    setQr(null);
     if (uid) {
       if (id) localStorage.setItem(`paikan-selected-trip:${uid}`, id);
       else localStorage.removeItem(`paikan-selected-trip:${uid}`);
@@ -118,7 +133,7 @@ export function App() {
     const { data } = db.auth.onAuthStateChange((_e, s) => {
       setUid(s?.user.id);
       setUser(s?.user ?? null);
-      setQr("");
+      setQr(null);
       qc.clear();
       const previous = localStorage.getItem("travelmate-local-user");
       if (previous && previous !== s?.user.id) void clearAllLocalData();
@@ -331,83 +346,136 @@ export function App() {
         )}
         {route.startsWith("#/join/") ? (
           <section>
-            <h2>{t("Join a trip", "เข้าร่วมทริป")}</h2>
+            <h2 class="editor-panel" ref={joinHeading} tabIndex={-1}>
+              {t("Join a trip", "เข้าร่วมทริป")}
+            </h2>
             <p>
               {t(
-                "Install Roam first if you want to use it from your Home Screen. Open this invitation inside the installed app. Browser and installed app sessions may differ.",
-                "ติดตั้งแอปก่อน แล้วเปิดคำเชิญในแอปที่ติดตั้ง บัญชีในเบราว์เซอร์อาจต่างจากแอป",
+                "The organizer must approve your request before you can access the trip.",
+                "ผู้จัดทริปต้องอนุมัติคำขอก่อนที่คุณจะเข้าถึงทริปได้",
               )}
             </p>
-            <details
-              class="create-trip"
-              onToggle={(event) => {
-                if (event.currentTarget.open)
-                  revealEditor(event.currentTarget.querySelector("form"));
+            <form
+              class="guest-entry-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData(e.currentTarget);
+                void run(async () => {
+                  await redeem(route.slice(7), f.get("name"));
+                  history.replaceState(null, "", location.pathname + "#");
+                  setRoute("#");
+                });
               }}
             >
+              <label>
+                {t("Your name", "ชื่อของคุณ")}
+                <input name="name" required maxLength={80} />
+              </label>
+              <label class="guest-entry-acknowledgement">
+                <input type="checkbox" required />
+                {t(
+                  "I am using the browser or installed app I will keep using.",
+                  "ฉันกำลังใช้แอปหรือเบราว์เซอร์ที่จะใช้ต่อไป",
+                )}
+              </label>
+              <Button type="submit" disabled={busy}>
+                {t("Request to join", "ขอเข้าร่วม")}
+              </Button>
+            </form>
+            <details class="guest-install-help">
               <summary>
-                {t("Join as a guest", "เข้าร่วมแบบผู้เยี่ยมชม")}
+                {t("Install Roam (optional)", "ติดตั้ง Roam (ไม่บังคับ)")}
               </summary>
-              <form
-                class="editor-panel"
-                tabIndex={-1}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  void run(async () => {
-                    await redeem(route.slice(7), f.get("name"));
-                    history.replaceState(null, "", location.pathname + "#");
-                    setRoute("#");
-                  });
-                }}
-              >
-                <label>
-                  {t("Your name", "ชื่อของคุณ")}
-                  <input name="name" required maxLength={80} />
-                </label>
-                <label>
-                  <input type="checkbox" required />
-                  {t(
-                    "I am using the browser or installed app I will keep using.",
-                    "ฉันกำลังใช้แอปหรือเบราว์เซอร์ที่จะใช้ต่อไป",
-                  )}
-                </label>
-                <Button disabled={busy}>
-                  {t("Request to join", "ขอเข้าร่วม")}
-                </Button>
-              </form>
+              <p>
+                {t(
+                  "If you plan to use Roam from your Home Screen, open this invitation in the installed app before requesting access. Sessions may differ between the app and browser.",
+                  "หากวางแผนจะใช้ Roam จากหน้าจอโฮม ให้เปิดคำเชิญนี้ในแอปที่ติดตั้งก่อนขอเข้าร่วม เซสชันในแอปและเบราว์เซอร์อาจต่างกัน",
+                )}
+              </p>
             </details>
           </section>
         ) : null}
-        {!uid && !route.startsWith("#/join/") && (
-          <section>
-            <h2>{t("Reconnect to your trip", "เชื่อมต่อกับทริปของคุณ")}</h2>
-            <p>
-              {t(
-                "Ask your organizer for an invitation QR. If you lost your session, ask them to verify your identity before rejoining.",
-                "ขอ QR คำเชิญจากผู้จัดทริป หากข้อมูลบัญชีสูญหาย ให้ผู้จัดยืนยันตัวตนก่อนเข้าร่วมใหม่",
-              )}
-            </p>
-            <label>
-              {t("Paste invitation link", "วางลิงก์คำเชิญ")}
-              <input
-                type="url"
-                onChange={(e) => {
-                  try {
-                    const u = new URL(e.currentTarget.value);
-                    if (
-                      u.origin === location.origin &&
-                      /^#\/join\/[a-f0-9]{64}$/.test(u.hash)
-                    )
-                      location.hash = u.hash;
-                  } catch {
-                    /* Keep input for correction. */
+        {!selectedId &&
+          (!uid || user?.is_anonymous) &&
+          !route.startsWith("#/join/") && (
+            <section>
+              <h2>{t("Join a trip", "เข้าร่วมทริป")}</h2>
+              <p>
+                {t(
+                  "Ask your organizer for an invitation link or QR code. If you lost your session, ask them to verify your identity before rejoining.",
+                  "ขอลิงก์คำเชิญหรือรหัส QR จากผู้จัดทริป หากข้อมูลบัญชีสูญหาย ให้ผู้จัดยืนยันตัวตนก่อนเข้าร่วมใหม่",
+                )}
+              </p>
+              <form
+                class="guest-entry-form"
+                noValidate
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const input =
+                    event.currentTarget.elements.namedItem("invitation-link");
+                  if (!(input instanceof HTMLInputElement)) return;
+                  const value = input.value.trim();
+                  const code = value.replace(/[\s-]/g, "").toLowerCase();
+                  if (/^[a-f0-9]{16}$/.test(code)) {
+                    setInvitationError(null);
+                    focusJoinAfterPaste.current = true;
+                    location.hash = "#/join/" + code;
+                    return;
                   }
+                  try {
+                    const url = new URL(value);
+                    if (
+                      url.protocol === location.protocol &&
+                      url.origin === location.origin &&
+                      /^#\/join\/(?:[a-f0-9]{16}|[a-f0-9]{64})$/.test(url.hash)
+                    ) {
+                      setInvitationError(null);
+                      focusJoinAfterPaste.current = true;
+                      location.hash = url.hash;
+                      return;
+                    }
+                  } catch {
+                    // A malformed URL receives the same correction guidance.
+                  }
+                  setInvitationError(value ? "invalid" : "empty");
+                  input.focus();
                 }}
-              />
-            </label>
-          </section>
-        )}
+              >
+                <label>
+                  {t("Invitation code or link", "รหัสหรือลิงก์คำเชิญ")}
+                  <input
+                    id="invitation-link"
+                    type="text"
+                    autoCapitalize="none"
+                    spellcheck={false}
+                    required
+                    enterKeyHint="go"
+                    aria-invalid={invitationError ? true : undefined}
+                    aria-describedby={
+                      invitationError ? "invitation-link-error" : undefined
+                    }
+                    onInput={() => setInvitationError(null)}
+                  />
+                </label>
+                {invitationError && (
+                  <p id="invitation-link-error" role="alert">
+                    {invitationError === "empty"
+                      ? t(
+                          "Enter the invitation code or link from your organizer.",
+                          "กรุณากรอกรหัสหรือลิงก์คำเชิญจากผู้จัดทริป",
+                        )
+                      : t(
+                          "Check the invitation code or use the full link for this Roam site.",
+                          "ตรวจสอบรหัสคำเชิญหรือใช้ลิงก์ฉบับเต็มของเว็บไซต์ Roam นี้",
+                        )}
+                  </p>
+                )}
+                <Button type="submit">
+                  {t("Open invitation", "เปิดคำเชิญ")}
+                </Button>
+              </form>
+            </section>
+          )}
         {!selectedId &&
           !canCreateTrip(user) &&
           !route.startsWith("#/join/") && (
@@ -690,29 +758,60 @@ export function App() {
                                   </Button>
                                 </form>
                               </details>
-                              <Button
-                                disabled={busy || trip.status !== "active"}
-                                onClick={() =>
+                              <form
+                                onSubmit={(event) => {
+                                  event.preventDefault();
+                                  const expiry = new FormData(
+                                    event.currentTarget,
+                                  ).get("expiry");
                                   void run(async () => {
-                                    const r = await rpc("create_invite", {
-                                      p_trip_id: trip.id,
-                                    });
-                                    setQr(
-                                      await QRCode.toDataURL(
-                                        location.origin +
-                                          location.pathname +
-                                          "#/join/" +
-                                          r[0].token,
-                                      ),
+                                    const [invite] = await rpc(
+                                      "create_reusable_invite",
+                                      {
+                                        p_trip_id: trip.id,
+                                        p_expiry_date: expiry,
+                                      },
                                     );
-                                  })
-                                }
+                                    const link =
+                                      location.origin +
+                                      location.pathname +
+                                      "#/join/" +
+                                      invite.token;
+                                    setQr({
+                                      image: await QRCode.toDataURL(link),
+                                      code: invite.token
+                                        .toUpperCase()
+                                        .match(/.{4}/g)!
+                                        .join("-"),
+                                      link,
+                                    });
+                                  });
+                                }}
                               >
-                                {t(
-                                  "Create invitation QR (24 hours, 8 uses)",
-                                  "สร้าง QR คำเชิญ (24 ชั่วโมง 8 คน)",
-                                )}
-                              </Button>
+                                <label>
+                                  {t(
+                                    "Invitation expiry date",
+                                    "วันหมดอายุคำเชิญ",
+                                  )}
+                                  <input name="expiry" type="date" required />
+                                </label>
+                                <p>
+                                  {t(
+                                    "Valid through this date in",
+                                    "ใช้ได้จนสิ้นสุดวันที่เลือกในเขตเวลา",
+                                  )}{" "}
+                                  {trip.timezone}.{" "}
+                                  {t(
+                                    "A new invitation replaces the previous reusable invitation.",
+                                    "คำเชิญใหม่จะแทนที่คำเชิญแบบใช้ซ้ำเดิม",
+                                  )}
+                                </p>
+                                <Button
+                                  disabled={busy || trip.status !== "active"}
+                                >
+                                  {t("Create invitation", "สร้างคำเชิญ")}
+                                </Button>
+                              </form>
                               <form
                                 onSubmit={(e) => {
                                   e.preventDefault();
@@ -777,7 +876,11 @@ export function App() {
                                 ?.filter((i) => i.trip_id === trip.id)
                                 .map((i) => (
                                   <p key={i.id}>
-                                    {i.uses_count}/{i.max_uses} · {i.expires_at}
+                                    {i.uses_count}
+                                    {i.max_uses == null
+                                      ? ""
+                                      : "/" + i.max_uses}{" "}
+                                    · {i.expires_at}
                                     {i.revoked_at ? (
                                       <Button
                                         disabled={busy}
@@ -811,7 +914,7 @@ export function App() {
                                             await rpc("revoke_invite", {
                                               p_invite_id: i.id,
                                             });
-                                            setQr("");
+                                            setQr(null);
                                           })
                                         }
                                       >
@@ -827,7 +930,7 @@ export function App() {
                                     await rpc("archive_trip", {
                                       p_trip_id: trip.id,
                                     });
-                                    setQr("");
+                                    setQr(null);
                                   })
                                 }
                               >
@@ -924,12 +1027,23 @@ export function App() {
           >
             <h2>{t("Scan to request access", "สแกนเพื่อขอเข้าร่วม")}</h2>
             <img
-              src={qr}
+              src={qr.image}
               width="280"
               height="280"
               alt={t("Trip invitation QR code", "QR คำเชิญเข้าร่วมทริป")}
             />
-            <Button onClick={() => setQr("")}>{t("Close", "ปิด")}</Button>
+            <p>
+              {t("Invitation code", "รหัสคำเชิญ")} <strong>{qr.code}</strong>
+            </p>
+            <label>
+              {t("Invitation link", "ลิงก์คำเชิญ")}
+              <input
+                readOnly
+                value={qr.link}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+            </label>
+            <Button onClick={() => setQr(null)}>{t("Close", "ปิด")}</Button>
           </section>
         )}
       </main>

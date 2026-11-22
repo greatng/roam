@@ -634,8 +634,8 @@ async function installFixture(
       );
       if (member) member.can_edit_plan = args.p_can_edit === true;
       result = member ?? null;
-    } else if (fn === "create_invite") {
-      result = [{ token: "a".repeat(64) }];
+    } else if (fn === "create_reusable_invite") {
+      result = [{ token: "1234567890abcdef" }];
     } else if (fn === "revoke_invite") {
       invites = invites.map((invite) =>
         invite.id === args.p_invite_id
@@ -2114,7 +2114,8 @@ test("invitation QR reveals its panel and stays in the viewport", async ({
     .click();
   await page.getByText("Trip settings and access", { exact: true }).click();
   await page.getByText("Advanced: destination time", { exact: true }).click();
-  await page.getByRole("button", { name: /Create invitation QR/ }).click();
+  await page.getByLabel("Invitation expiry date").fill("2099-12-31");
+  await page.getByRole("button", { name: "Create invitation" }).click();
   const qrPanel = page.getByRole("region", { name: "Trip invitation" });
   await expect(qrPanel).toBeVisible();
   await expect
@@ -2134,10 +2135,15 @@ test("invitation QR reveals its panel and stays in the viewport", async ({
   await expect
     .poll(
       () =>
-        fixtureState.getRpcCalls().find((call) => call.fn === "create_invite")
-          ?.args,
+        fixtureState
+          .getRpcCalls()
+          .find((call) => call.fn === "create_reusable_invite")?.args,
     )
-    .toMatchObject({ p_trip_id: tripId });
+    .toMatchObject({ p_trip_id: tripId, p_expiry_date: "2099-12-31" });
+  await expect(qrPanel.getByText("1234-5678-90AB-CDEF")).toBeVisible();
+  await expect(qrPanel.getByLabel("Invitation link")).toHaveValue(
+    /#\/join\/1234567890abcdef$/,
+  );
   await page.screenshot({
     path: `artifacts/${testInfo.project.name}-invitation-qr-fixture-preview.png`,
     fullPage: true,
@@ -2212,10 +2218,104 @@ test("organizer confirms deletion of revoked invitations while active invitation
   ).toBeVisible();
 });
 
+test("pasted invitation requires submit and lets a guest correct the link", async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  const invitation = page.getByRole("textbox", {
+    name: "Invitation code or link",
+  });
+  const openInvitation = page.getByRole("button", { name: "Open invitation" });
+  const validLink = new URL(`/#/join/${"b".repeat(64)}`, page.url());
+
+  for (const value of [
+    "",
+    "this is not a URL",
+    `https://example.com${validLink.hash}`,
+    new URL("/#/join/short-token", validLink).href,
+  ]) {
+    await invitation.fill(value);
+    await invitation.press("Enter");
+    await expect(page).toHaveURL(new URL("/", validLink).href);
+    await expect(invitation).toHaveValue(value);
+    await expect(invitation).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByRole("alert")).toContainText(/link/i);
+    await expect(invitation).toHaveAccessibleDescription(/link/i);
+    await expect(invitation).toBeFocused();
+  }
+
+  await invitation.fill(validLink.href);
+  await invitation.press("Tab");
+  await expect(openInvitation).toBeFocused();
+  await expect(page).toHaveURL(new URL("/", validLink).href);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  if (testInfo.project.use.hasTouch) await openInvitation.tap();
+  else await invitation.press("Enter");
+
+  await expect(page).toHaveURL(validLink.href);
+  await expect(
+    page.getByRole("heading", { name: "Join a trip" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Your name")).toBeFocused();
+  await expect(page.getByRole("checkbox")).toBeInViewport();
+  await expect(
+    page.getByRole("button", { name: "Request to join" }),
+  ).toBeInViewport();
+  await expect(
+    page.getByText(
+      "The organizer must approve your request before you can access the trip.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Install Roam (optional)")).toBeVisible();
+  await expect(
+    page.getByText(/If you plan to use Roam from your Home Screen/),
+  ).toBeHidden();
+});
+
+test("Thai guest entry fits the viewport and uses the dark theme", async ({
+  page,
+}, testInfo) => {
+  if (testInfo.project.use.hasTouch)
+    await page.setViewportSize({ width: 320, height: 568 });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "ไทย / English" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("lang", "th");
+
+  const invitation = page.getByRole("textbox", { name: "รหัสหรือลิงก์คำเชิญ" });
+  await invitation.press("Enter");
+  await expect(invitation).toHaveAccessibleDescription(
+    "กรุณากรอกรหัสหรือลิงก์คำเชิญจากผู้จัดทริป",
+  );
+  await invitation.fill("1234-5678-90AB-CDEF");
+  await page.getByRole("button", { name: "เปิดคำเชิญ" }).click();
+  await expect(page).toHaveURL(/#\/join\/1234567890abcdef$/);
+
+  await expect(page.getByLabel("ชื่อของคุณ")).toBeInViewport();
+  await expect(
+    page.getByRole("checkbox", {
+      name: "ฉันกำลังใช้แอปหรือเบราว์เซอร์ที่จะใช้ต่อไป",
+    }),
+  ).toBeInViewport();
+  await expect(
+    page.getByRole("button", { name: "ขอเข้าร่วม" }),
+  ).toBeInViewport();
+  await expect(
+    page.getByText("ผู้จัดทริปต้องอนุมัติคำขอก่อนที่คุณจะเข้าถึงทริปได้"),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
 test("fresh invitation join validates before anonymous sign in and retries with the same guest identity", async ({
   page,
 }) => {
-  const token = "b".repeat(64);
+  const token = "1234567890abcdef";
   let anonymousSignIns = 0;
   let redeemCalls = 0;
   let pendingJoinCreated = false;
@@ -2287,9 +2387,14 @@ test("fresh invitation join validates before anonymous sign in and retries with 
     await page.evaluate(() => localStorage.getItem("sb-127-auth-token")),
   ).toBeNull();
   await expect.poll(() => anonymousSignIns).toBe(0);
-  await page.getByText("Join as a guest", { exact: true }).click();
   await page.getByLabel("Your name").fill("Niran");
-  await page.getByRole("checkbox").check();
+  const acknowledgement = page.getByRole("checkbox");
+  await expect(acknowledgement).toBeVisible();
+  await page.getByRole("button", { name: "Request to join" }).click();
+  await expect(acknowledgement).toBeFocused();
+  expect(gatewayCalls).toEqual([]);
+  expect(anonymousSignIns).toBe(0);
+  await acknowledgement.check();
   await page.getByRole("button", { name: "Request to join" }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Could not complete the invitation",
@@ -2357,7 +2462,6 @@ test("invalid invitation gateway response stays unauthenticated and explains the
     page.getByRole("heading", { name: "Join a trip" }),
   ).toBeVisible();
   await expect.poll(() => anonymousSignIns).toBe(0);
-  await page.getByText("Join as a guest", { exact: true }).click();
   await page.getByLabel("Your name").fill("Mali");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Request to join" }).click();
@@ -2596,7 +2700,7 @@ test("email account confirms sign-out of this device", async ({ page }) => {
   await expect(warning).toContainText("sign in again with your email");
   await warning.getByRole("button", { name: "Confirm sign out" }).click();
   await expect(
-    page.getByRole("heading", { name: "Reconnect to your trip" }),
+    page.getByRole("heading", { name: "Join a trip" }),
   ).toBeVisible();
 });
 
@@ -3057,7 +3161,7 @@ test.describe("Daily itinerary browser regressions", () => {
     ).toHaveCount(0);
     await expect(
       page.getByRole("button", {
-        name: "Create invitation QR (24 hours, 8 uses)",
+        name: "Create invitation",
       }),
     ).toHaveCount(0);
     await expect(
