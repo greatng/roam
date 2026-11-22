@@ -4,7 +4,7 @@ const tags = {
   transport: ["Transport", "การเดินทาง"],
   food: ["Food", "อาหาร"],
   shopping: ["Shopping", "ช้อปปิ้ง"],
-  sightseeing: ["Sightseeing", "เที่ยวชม"],
+  sightseeing: ["Sightseeing", "เที่ยวชมสถานที่"],
   "must-go": ["Must go", "ต้องไป"],
   other: ["Other", "อื่น ๆ"],
 } as const;
@@ -40,7 +40,7 @@ export function ActivityTagField({
   tag?: ActivityTag | null;
   thai: boolean;
 }) {
-  const label = thai ? "ป้ายกำกับกิจกรรม" : "Activity tag";
+  const label = thai ? "หมวดกิจกรรม" : "Activity tag";
   const [value, setValue] = useState(tag ?? "");
   return (
     <label>

@@ -8,7 +8,7 @@ type Shape = "square" | "circle" | "rounded";
 
 export type ButtonProps = Omit<
   JSX.ButtonHTMLAttributes<HTMLButtonElement>,
-  "children"
+  "children" | "prefix"
 > & {
   size?: Size;
   appearance?: Appearance;

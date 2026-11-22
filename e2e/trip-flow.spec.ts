@@ -69,6 +69,7 @@ async function installFixture(
     linkedMember?: boolean;
     daily?: boolean;
     longHotel?: boolean;
+    taggedActivity?: boolean;
     failReceiptUploadOnce?: boolean;
     seedReceipt?: boolean;
     failReceiptCleanup?: boolean;
@@ -150,6 +151,7 @@ async function installFixture(
       id: "stop-next",
       trip_id: tripId,
       title: "Chatuchak Market",
+      activity_tag: options.taggedActivity ? "sightseeing" : null,
       starts_at: "2026-11-02T05:00:00Z",
       address: "Kamphaeng Phet 2 Road",
       position: 2,
@@ -3613,11 +3615,25 @@ test("Preparation shares item names and keeps checkmarks and private lists per t
   );
 });
 
-test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 650 });
+test("trip tabs show icons in one bordered row and scroll on narrow screens", async ({
+  page,
+}, testInfo) => {
+  const narrow = testInfo.project.name === "mobile-chromium";
+  if (narrow) await page.setViewportSize({ width: 320, height: 650 });
+  await page.emulateMedia({ colorScheme: "light" });
   await installFixture(page);
   await page.goto("/");
   const card = await openTrip(page);
+  const dashboard = page.getByRole("region", { name: "Choose a trip" });
+  const dashboardHeading = dashboard.getByRole("heading", {
+    name: "Your trips",
+  });
+  const gapBelowHeading = async (content: Locator) => {
+    const heading = (await dashboardHeading.boundingBox())!;
+    const next = (await content.boundingBox())!;
+    return next.y - heading.y - heading.height;
+  };
+  expect(await gapBelowHeading(card)).toBeLessThan(4);
   const title = await card
     .getByText("Bangkok Weekend", { exact: true })
     .boundingBox();
@@ -3634,18 +3650,76 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
     "Preparation",
     "Trip",
   ]);
-  expect(
-    await nav.evaluate((row) => ({
-      scrollable: row.scrollWidth > row.clientWidth,
-      rows: new Set(
-        Array.from(
-          row.querySelectorAll("button"),
-          (button) => button.offsetTop,
-        ),
-      ).size,
-      pageFits: document.documentElement.scrollWidth <= innerWidth,
-    })),
-  ).toEqual({ scrollable: true, rows: 1, pageFits: true });
+  for (const button of await buttons.all()) {
+    await expect(
+      button.locator('svg[aria-hidden="true"][focusable="false"]'),
+    ).toHaveCount(1);
+  }
+  const workspace = page.locator(".trip-workspace");
+  const heading = await workspace.locator(":scope > h2").boundingBox();
+  const metadata = await workspace.locator(":scope > p").boundingBox();
+  expect(metadata!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height);
+  expect(metadata!.y - heading!.y - heading!.height).toBeLessThan(4);
+  expect((await card.boundingBox())!.height).toBeLessThan(66);
+
+  for (const theme of ["light", "dark"]) {
+    if (theme === "dark") {
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect(
+      await nav.evaluate((row) => {
+        const buttons = Array.from(row.querySelectorAll("button"));
+        const selected = row.querySelector('[aria-current="page"]')!;
+        const border = getComputedStyle(row);
+        return {
+          scrollable: row.scrollWidth > row.clientWidth,
+          rows: new Set(buttons.map((button) => button.offsetTop)).size,
+          pageFits: document.documentElement.scrollWidth <= innerWidth,
+          hasBorder: [
+            border.borderTopWidth,
+            border.borderRightWidth,
+            border.borderBottomWidth,
+            border.borderLeftWidth,
+          ].every((width) => parseFloat(width) > 0),
+          hasTouchTargets: buttons.every(
+            (button) => button.offsetWidth >= 44 && button.offsetHeight >= 44,
+          ),
+          hasSelection:
+            getComputedStyle(selected).backgroundColor !==
+            getComputedStyle(buttons[1]).backgroundColor,
+        };
+      }),
+    ).toEqual({
+      scrollable: narrow,
+      rows: 1,
+      pageFits: true,
+      hasBorder: true,
+      hasTouchTargets: true,
+      hasSelection: true,
+    });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: testInfo.outputPath(`trip-navigation-${theme}.png`),
+      animations: "disabled",
+    });
+    await nav.getByRole("button", { name: "Itinerary", exact: true }).click();
+    const itinerary = page.getByRole("region", { name: "Trip itinerary" });
+    const viewToggle = itinerary.getByRole("navigation", {
+      name: "Itinerary view",
+    });
+    const firstDay = itinerary.locator(".plan-day-heading").first();
+    await expect(firstDay).toBeVisible();
+    const viewBounds = (await viewToggle.boundingBox())!;
+    const dayBounds = (await firstDay.boundingBox())!;
+    expect(dayBounds.y - viewBounds.y - viewBounds.height).toBeLessThan(12);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: testInfo.outputPath(`trip-itinerary-${theme}.png`),
+      animations: "disabled",
+    });
+    await nav.getByRole("button", { name: "Overview", exact: true }).click();
+  }
 
   await buttons.first().focus();
   for (const label of ["Itinerary", "Expenses", "Preparation", "Trip"]) {
@@ -3659,9 +3733,143 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
   await expect(
     nav.getByRole("button", { name: "Trip", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect
-    .poll(() => nav.evaluate((row) => row.scrollLeft))
-    .toBeGreaterThan(0);
+  if (narrow) {
+    await expect
+      .poll(() => nav.evaluate((row) => row.scrollLeft))
+      .toBeGreaterThan(0);
+    // Wider controls can wrap the sticky app header on a narrow screen.
+    await page.addStyleTag({ content: "header { column-gap: 2rem; }" });
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await expect
+      .poll(async () => {
+        const header = (await page.getByRole("banner").boundingBox())!;
+        const row = (await nav.boundingBox())!;
+        const gap = row.y - (header.y + header.height);
+        return header.height > 68 && gap >= 0 && gap <= 1;
+      })
+      .toBe(true);
+  }
+
+  await page.route(/\/rest\/v1\/trips(?:\?|$)/, (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.reload();
+  const empty = dashboard.getByText("No approved trips yet.", { exact: false });
+  await expect(empty).toBeVisible();
+  expect(await gapBelowHeading(empty)).toBeLessThan(4);
+});
+
+test("activity category stays a small pill in both themes and languages", async ({
+  page,
+}, testInfo) => {
+  if (testInfo.project.use.hasTouch) {
+    await page.setViewportSize({ width: 320, height: 720 });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await installFixture(page, { taggedActivity: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "Itinerary", exact: true }).click();
+  const activity = page.locator(".plan-activity").filter({
+    has: page.getByText("Chatuchak Market", { exact: true }),
+  });
+  const tag = activity.locator(".activity-tag");
+  const measurements = [];
+
+  for (const locale of ["en", "th"]) {
+    if (locale === "th") {
+      await page.getByRole("button", { name: "ไทย / English" }).click();
+    }
+    await expect(tag).toHaveText(
+      locale === "en" ? "Sightseeing" : "เที่ยวชมสถานที่",
+    );
+    for (const theme of ["light", "dark"]) {
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await activity.screenshot({
+        path: testInfo.outputPath(`activity-tag-${locale}-${theme}.png`),
+        animations: "disabled",
+      });
+      measurements.push(
+        await tag.evaluate((badge) => {
+          const text = document.createRange();
+          text.selectNodeContents(badge);
+          const bounds = badge.getBoundingClientRect();
+          return {
+            extraWidth: bounds.width - text.getBoundingClientRect().width,
+            height: bounds.height,
+            radius: parseFloat(getComputedStyle(badge).borderTopLeftRadius),
+          };
+        }),
+      );
+      await page.locator(".theme-toggle").click();
+    }
+  }
+
+  for (const { extraWidth, height, radius } of measurements) {
+    expect(extraWidth).toBeGreaterThan(0);
+    expect(extraWidth).toBeLessThan(16);
+    expect(height).toBeLessThan(24);
+    expect(radius).toBeGreaterThanOrEqual(height / 2);
+  }
+});
+
+test("Thai trip labels and itinerary stay readable on a narrow screen", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile-chromium",
+    "Narrow touch viewport",
+  );
+  await page.setViewportSize({ width: 320, height: 720 });
+  await installFixture(page, { longHotel: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "ไทย / English" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "th");
+  await expect(page.locator(".trip-workspace > p")).toContainText("ใช้งานอยู่");
+  await expect(page.getByLabel("วันที่ในแผน")).toBeVisible();
+  await expect(
+    page.getByRole("strong").filter({ hasText: "ผู้ติดต่อฉุกเฉินในครอบครัว" }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: testInfo.outputPath("trip-overview-thai.png"),
+    animations: "disabled",
+  });
+
+  const nav = page.getByRole("navigation", { name: "เมนูทริป" });
+  const buttons = nav.getByRole("button");
+  await expect(buttons).toHaveText([
+    "ภาพรวม",
+    "แผนการเดินทาง",
+    "ค่าใช้จ่าย",
+    "เตรียมตัว",
+    "ทริป",
+  ]);
+  for (const button of await buttons.all()) {
+    await button.scrollIntoViewIfNeeded();
+    const row = (await nav.boundingBox())!;
+    const bounds = (await button.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(row.x);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(row.x + row.width);
+  }
+
+  await nav.getByRole("button", { name: "แผนการเดินทาง", exact: true }).click();
+  const itinerary = page.getByRole("region", { name: "แผนการเดินทาง" });
+  await expect(
+    itinerary.getByRole("button", { name: "แผนรายวัน" }),
+  ).toBeVisible();
+  await expect(itinerary.getByText("วันที่ 1", { exact: true })).toBeVisible();
+  const stay = itinerary.locator(".plan-hotel-card").first();
+  await expect(stay).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: testInfo.outputPath("trip-itinerary-thai.png"),
+    animations: "disabled",
+  });
 });
 
 test("header account icon opens the email panel and fits a narrow viewport", async ({
@@ -3686,6 +3894,8 @@ test("header account icon opens the email panel and fits a narrow viewport", asy
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
+  // Let the account menu's post-render effect register its Escape listener.
+  await page.clock.runFor(150);
   await page.keyboard.press("Escape");
   await expect(account).toHaveAttribute("aria-expanded", "false");
   await expect(account).toBeFocused();

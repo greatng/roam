@@ -95,12 +95,12 @@ export function actionError(error: unknown, thai = false): string {
   if (code === "PGRST301" || value?.status === 401)
     return choose(
       "Your session could not be verified. Reconnect and refresh; email users can sign in again. Guests should contact their organizer before signing out.",
-      "ไม่สามารถยืนยันบัญชี กรุณาเชื่อมต่อและรีเฟรช ผู้ใช้อีเมลลงชื่อเข้าใหม่ได้ ผู้เยี่ยมชมควรติดต่อผู้จัดก่อนออกจากระบบ",
+      "ยืนยันบัญชีไม่ได้ กรุณาเชื่อมต่ออินเทอร์เน็ตและรีเฟรช หากใช้อีเมล คุณลงชื่อเข้าใช้ใหม่ได้ หากใช้บัญชีผู้เยี่ยมชม ให้ติดต่อผู้จัดทริปก่อนออกจากระบบ",
     );
   if (message.includes("archived"))
     return choose(
       "This trip is archived. Its organizer can restore it before making changes.",
-      "ทริปนี้เก็บถาวรแล้ว ให้ผู้จัดกู้คืนก่อนแก้ไข",
+      "ทริปนี้เก็บถาวรแล้ว ให้ผู้จัดกู้คืนทริปก่อนแก้ไข",
     );
   if (message.includes("exact trip name") || message.includes("confirmation"))
     return choose(
@@ -115,7 +115,7 @@ export function actionError(error: unknown, thai = false): string {
   )
     return choose(
       "The server could not be reached. Check your connection and try again. Your saved trip details remain on this device.",
-      "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ ข้อมูลที่บันทึกยังอยู่ในอุปกรณ์",
+      "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่ ข้อมูลที่บันทึกไว้ยังอยู่ในอุปกรณ์นี้",
     );
   return choose(
     "This action could not be completed. Refresh the trip and try again; ask the organizer if the problem continues.",
