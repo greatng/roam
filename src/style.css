@@ -151,40 +151,63 @@ img {
   margin: 1rem 0;
   box-shadow: none;
 }
-.activity-heading,
-.activity-tabs {
+.activity-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
   flex-wrap: wrap;
-}
-.activity-heading {
   padding: 1rem 0;
 }
 .activity-heading p {
   color: var(--muted);
 }
 .activity-tabs {
-  justify-content: flex-start;
-  flex-wrap: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   overflow-x: auto;
   max-width: 100%;
-  border-bottom: 1px solid var(--line);
-  padding: 0.25rem 0 0.8rem;
-  margin: 0.6rem 0 1.4rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.25rem;
+  margin: 0.6rem 0 1rem;
 }
 .activity-tabs button {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
   background: transparent;
   color: var(--muted);
   border-radius: 99px;
-  min-height: 46px;
+}
+.activity-tabs button:hover:not(:disabled) {
+  transform: none;
+}
+.activity-tabs button:not([aria-current="page"]):hover:not(:disabled) {
+  background: var(--line);
+  color: var(--ink);
 }
 .activity-tabs button[aria-current="page"] {
-  background: var(--ink);
+  background: var(--moss-dark);
   color: white;
   box-shadow: none;
+}
+.activity-tabs button:focus-visible {
+  outline-offset: -3px;
+}
+.activity-tabs svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .next-stop {
   background: #e8ecdf;
@@ -317,15 +340,6 @@ fieldset {
 .check-option input {
   width: 26px;
 }
-.activity-tabs {
-  gap: 0.4rem;
-}
-.activity-tabs button {
-  min-width: 112px;
-}
-.activity-tabs button[aria-current="page"] {
-  background: var(--moss-dark);
-}
 .plan > p:first-of-type {
   color: var(--muted);
 }
@@ -436,14 +450,8 @@ details > summary {
   }
   .activity-tabs {
     position: sticky;
-    top: 63px;
+    top: 68px;
     z-index: 3;
-    background: #f5f1e8;
-  }
-  .activity-tabs button {
-    flex: 0 0 auto;
-    margin: 0.1rem;
-    padding-inline: 0.45rem;
   }
   section,
   form {
@@ -527,14 +535,9 @@ details > summary {
     padding: 0.45rem 0;
   }
   .activity-tabs {
-    gap: 0.2rem;
-    padding-bottom: 0.45rem;
     margin: 0.35rem 0 0.8rem;
   }
   .activity-tabs button {
-    min-width: 0;
-    min-height: 44px;
-    padding-inline: 0.25rem;
     font-size: 0.88rem;
   }
   .next-stop {
@@ -578,12 +581,6 @@ details > summary {
   }
   .queue-item {
     padding: 0.65rem 0;
-  }
-  .trip-cards {
-    gap: 0.6rem;
-  }
-  .trip-cards button {
-    min-height: 60px;
   }
   .senior {
     font-size: 1.2rem;
@@ -656,9 +653,6 @@ details > summary {
     font-size: 0.82rem;
     line-height: 1.35;
   }
-  .activity-tabs {
-    top: 56px;
-  }
   .plan-night + .plan-night {
     margin-top: 1rem;
   }
@@ -711,7 +705,7 @@ details > summary {
 .trip-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-  gap: 1rem;
+  gap: 0.6rem;
 }
 .trip-cards > * {
   min-width: 0;
@@ -719,15 +713,21 @@ details > summary {
 .trip-cards button {
   text-align: start;
   width: 100%;
-  min-height: 72px;
+  min-height: 56px;
+  margin: 0;
+  padding-block: 0.125rem;
+  line-height: 1.25;
 }
 .trip-cards .app-button__label > strong,
 .trip-cards .app-button__label > span {
   display: block;
   overflow-wrap: anywhere;
 }
-.activity-tabs button {
-  min-height: 48px;
+.trip-workspace > h2 {
+  margin-block: 0 0.15rem;
+}
+.trip-workspace > p {
+  margin-block: 0 0.35rem;
 }
 .queue-item {
   padding: 1rem 0;
@@ -960,8 +960,8 @@ button.plan-icon-button {
 :root[data-theme="dark"] [role="alert"] {
   color: var(--alert);
 }
-:root[data-theme="dark"] .activity-tabs {
-  background: var(--page);
+:root[data-theme="dark"] .activity-tabs button[aria-current="page"] {
+  color: var(--page);
 }
 :root[data-theme="dark"] .next-stop,
 :root[data-theme="dark"] .notice {

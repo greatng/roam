@@ -292,12 +292,11 @@ export function TripActivity({
     const row = tabs.current;
     const current = row?.querySelector('[aria-current="page"]');
     if (!row || !current) return;
-    const viewport = row.getBoundingClientRect();
+    const left = row.getBoundingClientRect().left + row.clientLeft;
+    const right = left + row.clientWidth;
     const button = current.getBoundingClientRect();
-    if (button.left < viewport.left)
-      row.scrollLeft += button.left - viewport.left;
-    else if (button.right > viewport.right)
-      row.scrollLeft += button.right - viewport.right;
+    if (button.left < left) row.scrollLeft += button.left - left;
+    else if (button.right > right) row.scrollLeft += button.right - right;
   }, [tab, senior]);
   const revealExpenseOnOpen = useRef(false);
   const expenseDateEdited = useRef(false);
@@ -1207,6 +1206,14 @@ export function TripActivity({
               type="button"
               aria-current={tab === "today" ? "page" : undefined}
               onClick={() => setTab("today")}
+              prefix={
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              }
             >
               {tr("Overview", "ภาพรวม")}
             </Button>
@@ -1219,6 +1226,13 @@ export function TripActivity({
                 setStayToEdit(null);
                 setTab("plan");
               }}
+              prefix={
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <circle cx="6" cy="18" r="3" />
+                  <path d="M9 18h7a4 4 0 0 0 0-8H8a3 3 0 0 1 0-6h7" />
+                  <path d="m13 2 2 2-2 2" />
+                </svg>
+              }
             >
               {tr("Itinerary", "แผนการเดินทาง")}
             </Button>
@@ -1227,6 +1241,12 @@ export function TripActivity({
             type="button"
             aria-current={tab === "expenses" ? "page" : undefined}
             onClick={() => setTab("expenses")}
+            prefix={
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M21 10h-5a2 2 0 0 0 0 4h5" />
+              </svg>
+            }
           >
             {tr("Expenses", "ค่าใช้จ่าย")}
           </Button>
@@ -1234,6 +1254,11 @@ export function TripActivity({
             type="button"
             aria-current={tab === "preparation" ? "page" : undefined}
             onClick={() => setTab("preparation")}
+            prefix={
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="m3 7 2 2 4-4m-6 12 2 2 4-4M12 7h9m-9 10h9" />
+              </svg>
+            }
           >
             {tr("Preparation", "เตรียมตัว")}
           </Button>
@@ -1241,6 +1266,12 @@ export function TripActivity({
             type="button"
             aria-current={tab === "trip" ? "page" : undefined}
             onClick={() => setTab("trip")}
+            prefix={
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <rect x="3" y="7" width="18" height="13" rx="2" />
+                <path d="M9 7V4h6v3M8 7v13m8-13v13" />
+              </svg>
+            }
           >
             {tr("Trip", "ทริป")}
           </Button>

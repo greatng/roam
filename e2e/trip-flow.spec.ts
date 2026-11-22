@@ -3613,8 +3613,12 @@ test("Preparation shares item names and keeps checkmarks and private lists per t
   );
 });
 
-test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 650 });
+test("trip tabs show icons in one bordered row and scroll on narrow screens", async ({
+  page,
+}, testInfo) => {
+  const narrow = testInfo.project.name === "mobile-chromium";
+  if (narrow) await page.setViewportSize({ width: 320, height: 650 });
+  await page.emulateMedia({ colorScheme: "light" });
   await installFixture(page);
   await page.goto("/");
   const card = await openTrip(page);
@@ -3634,18 +3638,59 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
     "Preparation",
     "Trip",
   ]);
-  expect(
-    await nav.evaluate((row) => ({
-      scrollable: row.scrollWidth > row.clientWidth,
-      rows: new Set(
-        Array.from(
-          row.querySelectorAll("button"),
-          (button) => button.offsetTop,
-        ),
-      ).size,
-      pageFits: document.documentElement.scrollWidth <= innerWidth,
-    })),
-  ).toEqual({ scrollable: true, rows: 1, pageFits: true });
+  for (const button of await buttons.all()) {
+    await expect(
+      button.locator('svg[aria-hidden="true"][focusable="false"]'),
+    ).toHaveCount(1);
+  }
+  const workspace = page.locator(".trip-workspace");
+  const heading = await workspace.locator(":scope > h2").boundingBox();
+  const metadata = await workspace.locator(":scope > p").boundingBox();
+  expect(metadata!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height);
+  expect(metadata!.y - heading!.y - heading!.height).toBeLessThan(4);
+  expect((await card.boundingBox())!.height).toBeLessThan(66);
+
+  for (const theme of ["light", "dark"]) {
+    if (theme === "dark") {
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    }
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect(
+      await nav.evaluate((row) => {
+        const buttons = Array.from(row.querySelectorAll("button"));
+        const selected = row.querySelector('[aria-current="page"]')!;
+        const border = getComputedStyle(row);
+        return {
+          scrollable: row.scrollWidth > row.clientWidth,
+          rows: new Set(buttons.map((button) => button.offsetTop)).size,
+          pageFits: document.documentElement.scrollWidth <= innerWidth,
+          hasBorder: [
+            border.borderTopWidth,
+            border.borderRightWidth,
+            border.borderBottomWidth,
+            border.borderLeftWidth,
+          ].every((width) => parseFloat(width) > 0),
+          hasTouchTargets: buttons.every(
+            (button) => button.offsetWidth >= 44 && button.offsetHeight >= 44,
+          ),
+          hasSelection:
+            getComputedStyle(selected).backgroundColor !==
+            getComputedStyle(buttons[1]).backgroundColor,
+        };
+      }),
+    ).toEqual({
+      scrollable: narrow,
+      rows: 1,
+      pageFits: true,
+      hasBorder: true,
+      hasTouchTargets: true,
+      hasSelection: true,
+    });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: testInfo.outputPath(`trip-navigation-${theme}.png`),
+    });
+  }
 
   await buttons.first().focus();
   for (const label of ["Itinerary", "Expenses", "Preparation", "Trip"]) {
@@ -3659,9 +3704,17 @@ test("trip tabs stay in order in a single scrollable row", async ({ page }) => {
   await expect(
     nav.getByRole("button", { name: "Trip", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect
-    .poll(() => nav.evaluate((row) => row.scrollLeft))
-    .toBeGreaterThan(0);
+  if (narrow) {
+    await expect
+      .poll(() => nav.evaluate((row) => row.scrollLeft))
+      .toBeGreaterThan(0);
+    await page.evaluate(() => window.scrollBy(0, 500));
+    const appHeader = await page.locator("header").boundingBox();
+    const stickyRow = await nav.boundingBox();
+    expect(stickyRow!.y).toBeGreaterThanOrEqual(
+      appHeader!.y + appHeader!.height,
+    );
+  }
 });
 
 test("header account icon opens the email panel and fits a narrow viewport", async ({
