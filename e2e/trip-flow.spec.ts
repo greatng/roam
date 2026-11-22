@@ -69,6 +69,7 @@ async function installFixture(
     linkedMember?: boolean;
     daily?: boolean;
     longHotel?: boolean;
+    taggedActivity?: boolean;
     failReceiptUploadOnce?: boolean;
     seedReceipt?: boolean;
     failReceiptCleanup?: boolean;
@@ -150,6 +151,7 @@ async function installFixture(
       id: "stop-next",
       trip_id: tripId,
       title: "Chatuchak Market",
+      activity_tag: options.taggedActivity ? "sightseeing" : null,
       starts_at: "2026-11-02T05:00:00Z",
       address: "Kamphaeng Phet 2 Road",
       position: 2,
@@ -3755,6 +3757,60 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   const empty = dashboard.getByText("No approved trips yet.", { exact: false });
   await expect(empty).toBeVisible();
   expect(await gapBelowHeading(empty)).toBeLessThan(4);
+});
+
+test("activity category stays a small pill in both themes and languages", async ({
+  page,
+}, testInfo) => {
+  if (testInfo.project.use.hasTouch) {
+    await page.setViewportSize({ width: 320, height: 720 });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await installFixture(page, { taggedActivity: true });
+  await page.goto("/");
+  await openTrip(page);
+  await page.getByRole("button", { name: "Itinerary", exact: true }).click();
+  const activity = page.locator(".plan-activity").filter({
+    has: page.getByText("Chatuchak Market", { exact: true }),
+  });
+  const tag = activity.locator(".activity-tag");
+  const measurements = [];
+
+  for (const locale of ["en", "th"]) {
+    if (locale === "th") {
+      await page.getByRole("button", { name: "ไทย / English" }).click();
+    }
+    await expect(tag).toHaveText(
+      locale === "en" ? "Sightseeing" : "เที่ยวชมสถานที่",
+    );
+    for (const theme of ["light", "dark"]) {
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await activity.screenshot({
+        path: testInfo.outputPath(`activity-tag-${locale}-${theme}.png`),
+        animations: "disabled",
+      });
+      measurements.push(
+        await tag.evaluate((badge) => {
+          const text = document.createRange();
+          text.selectNodeContents(badge);
+          const bounds = badge.getBoundingClientRect();
+          return {
+            extraWidth: bounds.width - text.getBoundingClientRect().width,
+            height: bounds.height,
+            radius: parseFloat(getComputedStyle(badge).borderTopLeftRadius),
+          };
+        }),
+      );
+      await page.locator(".theme-toggle").click();
+    }
+  }
+
+  for (const { extraWidth, height, radius } of measurements) {
+    expect(extraWidth).toBeGreaterThan(0);
+    expect(extraWidth).toBeLessThan(16);
+    expect(height).toBeLessThan(24);
+    expect(radius).toBeGreaterThanOrEqual(height / 2);
+  }
 });
 
 test("Thai trip labels and itinerary stay readable on a narrow screen", async ({
