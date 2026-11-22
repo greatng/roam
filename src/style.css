@@ -644,6 +644,9 @@ details > summary {
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .trip-member-row > :first-child {
+    flex: 1 1 8rem;
+  }
   .plan-night + .plan-night {
     margin-top: 1rem;
   }
@@ -696,7 +699,6 @@ details > summary {
   padding-block: 0.45rem;
 }
 .trip-member-row > :first-child {
-  flex: 1 1 8rem;
   min-width: 0;
   overflow-wrap: anywhere;
 }
