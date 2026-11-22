@@ -281,6 +281,18 @@ export function TripActivity({
   );
   const [editing, setEditing] = useState<Item | null>(null);
   const [stayToEdit, setStayToEdit] = useState<StaySummary | null>(null);
+  const tabs = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const row = tabs.current;
+    const current = row?.querySelector('[aria-current="page"]');
+    if (!row || !current) return;
+    const viewport = row.getBoundingClientRect();
+    const button = current.getBoundingClientRect();
+    if (button.left < viewport.left)
+      row.scrollLeft += button.left - viewport.left;
+    else if (button.right > viewport.right)
+      row.scrollLeft += button.right - viewport.right;
+  }, [tab, senior]);
   const expenseDateEdited = useRef(false);
   useEffect(() => {
     if (expenseDraft.restored) {
@@ -1178,6 +1190,7 @@ export function TripActivity({
       )}
       {!senior && (
         <nav
+          ref={tabs}
           class="activity-tabs"
           aria-label={tr("Trip sections", "ส่วนของทริป")}
         >
@@ -1204,17 +1217,17 @@ export function TripActivity({
           )}
           <Button
             type="button"
-            aria-current={tab === "preparation" ? "page" : undefined}
-            onClick={() => setTab("preparation")}
-          >
-            {tr("Preparation", "เตรียมตัว")}
-          </Button>
-          <Button
-            type="button"
             aria-current={tab === "expenses" ? "page" : undefined}
             onClick={() => setTab("expenses")}
           >
             {tr("Expenses", "ค่าใช้จ่าย")}
+          </Button>
+          <Button
+            type="button"
+            aria-current={tab === "preparation" ? "page" : undefined}
+            onClick={() => setTab("preparation")}
+          >
+            {tr("Preparation", "เตรียมตัว")}
           </Button>
           <Button
             type="button"

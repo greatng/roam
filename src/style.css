@@ -167,11 +167,15 @@ img {
 }
 .activity-tabs {
   justify-content: flex-start;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
   border-bottom: 1px solid var(--line);
   padding: 0.25rem 0 0.8rem;
   margin: 0.6rem 0 1.4rem;
 }
 .activity-tabs button {
+  flex-shrink: 0;
   background: transparent;
   color: var(--muted);
   border-radius: 99px;
@@ -437,7 +441,7 @@ details > summary {
     background: #f5f1e8;
   }
   .activity-tabs button {
-    flex: 1;
+    flex: 0 0 auto;
     margin: 0.1rem;
     padding-inline: 0.45rem;
   }
