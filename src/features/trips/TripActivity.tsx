@@ -227,17 +227,30 @@ function toTripLocal(value: string, timezone: string) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+function openNativeDatePicker(input: HTMLInputElement) {
+  try {
+    if (typeof input.showPicker !== "function") return false;
+    input.showPicker();
+    return true;
+  } catch {
+    // Embedded previews can restrict the scripted picker. Keep the native action.
+    return false;
+  }
+}
+
 export function TripActivity({
   trip,
   members,
   uid,
   thai,
+  refreshStatus,
   tripSettings,
 }: {
   trip: Trip;
   members: Member[];
   uid: string;
   thai: boolean;
+  refreshStatus: ComponentChildren;
   tripSettings?: ComponentChildren;
 }) {
   const tr = (en: string, th: string) => (thai ? th : en);
@@ -1087,9 +1100,11 @@ export function TripActivity({
             : "activity"
       }
     >
-      <div class="activity-heading">
+      <div class="trip-controls">
         <Button
           type="button"
+          size="small"
+          prefix={<ActionIcon kind="senior" />}
           aria-pressed={senior}
           onClick={() => setSenior(!senior)}
         >
@@ -1097,6 +1112,7 @@ export function TripActivity({
             ? tr("Exit senior view", "ปิดโหมดผู้สูงวัย")
             : tr("Senior view", "โหมดผู้สูงวัย")}
         </Button>
+        {refreshStatus}
       </div>
       {offline && (
         <p role="status">
@@ -1320,14 +1336,29 @@ export function TripActivity({
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </IconButton>
-            <label>
-              <span>{tr("Itinerary date", "วันที่ในแผน")}</span>
+            <h2 class="overview-day-heading">
+              <time dateTime={selectedDay}>{dayLabel}</time>
+            </h2>
+            <span class="day-calendar">
+              <ActionIcon kind="calendar" />
               <input
                 type="date"
                 aria-label={tr("Itinerary date", "วันที่ในแผน")}
                 min={trip.start_date}
                 max={trip.end_date}
                 value={selectedDay}
+                onClick={(event) => {
+                  if (openNativeDatePicker(event.currentTarget))
+                    event.preventDefault();
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    (event.key === "Enter" || event.key === " ") &&
+                    openNativeDatePicker(event.currentTarget)
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
                 onChange={(event) =>
                   setSelectedDay(
                     clampTripDate(
@@ -1337,7 +1368,7 @@ export function TripActivity({
                   )
                 }
               />
-            </label>
+            </span>
             <IconButton
               appearance="tertiary"
               aria-label={tr("Next day", "วันถัดไป")}
@@ -1349,9 +1380,6 @@ export function TripActivity({
               </svg>
             </IconButton>
           </div>
-          <h2 class="overview-day-heading">
-            <time dateTime={selectedDay}>{dayLabel}</time>
-          </h2>
           {!isActualToday ? null : (
             <div class="next-stop">
               {today.state === "trip-finished" ? (

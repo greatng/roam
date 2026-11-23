@@ -4,7 +4,16 @@ export function ActionIcon({
   kind,
   class: className,
 }: {
-  kind: "add" | "edit" | "remove" | "save" | "cancel" | "ellipsis";
+  kind:
+    | "add"
+    | "edit"
+    | "remove"
+    | "save"
+    | "cancel"
+    | "ellipsis"
+    | "refresh"
+    | "senior"
+    | "calendar";
   class?: string;
 }) {
   const common: JSX.SVGAttributes<SVGSVGElement> = {
@@ -57,6 +66,33 @@ export function ActionIcon({
         <circle cx="5" cy="12" r="1" />
         <circle cx="12" cy="12" r="1" />
         <circle cx="19" cy="12" r="1" />
+      </svg>
+    );
+  }
+
+  if (kind === "refresh") {
+    return (
+      <svg {...common}>
+        <path d="M20 5v5h-5M20 10a8 8 0 1 0-.8 7" />
+      </svg>
+    );
+  }
+
+  if (kind === "senior") {
+    return (
+      <svg {...common}>
+        <circle cx="6.5" cy="13" r="3.5" />
+        <circle cx="17.5" cy="13" r="3.5" />
+        <path d="M10 13a2 2 0 0 1 4 0" />
+      </svg>
+    );
+  }
+
+  if (kind === "calendar") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M7 3v4m10-4v4M3 10h18" />
       </svg>
     );
   }

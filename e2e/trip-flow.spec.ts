@@ -2769,6 +2769,89 @@ test("email account confirms sign-out of this device", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("trip controls and itinerary calendar fit both themes and languages", async ({
+  page,
+}, testInfo) => {
+  const mobile = Boolean(testInfo.project.use.hasTouch);
+  if (mobile) await page.setViewportSize({ width: 320, height: 650 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() => {
+    HTMLInputElement.prototype.showPicker = function () {
+      const previous = Number(this.dataset.pickerRequests ?? 0);
+      this.dataset.pickerRequests = String(previous + 1);
+    };
+  });
+  await installFixture(page);
+  await page.goto("/");
+  await openTrip(page);
+  for (const thai of [false, true]) {
+    if (thai) await page.getByRole("button", { name: "ไทย / English" }).click();
+    for (const theme of ["light", "dark"]) {
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const controls = page.locator(".trip-controls");
+      const senior = controls.getByRole("button", {
+        name: thai ? "โหมดผู้สูงวัย" : "Senior view",
+        exact: true,
+      });
+      const refresh = controls.getByRole("button", {
+        name: thai ? "ตรวจสอบสถานะล่าสุด" : "Refresh status",
+      });
+      const requested = page.waitForRequest(/\/rest\/v1\/trips\?/);
+      await refresh.press("Enter");
+      await requested;
+      const seniorBox = (await senior.boundingBox())!;
+      const refreshBox = (await refresh.boundingBox())!;
+      expect(seniorBox.height).toBeGreaterThanOrEqual(44);
+      expect(refreshBox.height).toBeGreaterThanOrEqual(44);
+      if (seniorBox.y === refreshBox.y) {
+        expect(refreshBox.x - seniorBox.x - seniorBox.width).toBeGreaterThan(5);
+      } else {
+        expect(mobile).toBe(true);
+        expect(refreshBox.y - seniorBox.y - seniorBox.height).toBeGreaterThan(
+          5,
+        );
+      }
+      const calendar = page.getByLabel(thai ? "วันที่ในแผน" : "Itinerary date");
+      const date = page.locator(".overview-day-heading time");
+      const dateBox = (await date.boundingBox())!;
+      const calendarBox = (await calendar.boundingBox())!;
+      expect(calendarBox.width).toBeGreaterThanOrEqual(44);
+      expect(calendarBox.height).toBeGreaterThanOrEqual(44);
+      expect(calendarBox.x - dateBox.x - dateBox.width).toBeGreaterThan(5);
+      expect(calendarBox.y).toBeLessThan(dateBox.y + dateBox.height);
+      const count = Number(await calendar.getAttribute("data-picker-requests"));
+      await calendar.press("Enter");
+      await expect(calendar).toHaveAttribute(
+        "data-picker-requests",
+        String(count + 1),
+      );
+      if (mobile) {
+        await calendar.tap();
+        await expect(calendar).toHaveAttribute(
+          "data-picker-requests",
+          String(count + 2),
+        );
+      }
+      const next = page.getByRole("button", {
+        name: thai ? "วันถัดไป" : "Next day",
+      });
+      if (mobile) await next.tap();
+      else await next.press("Enter");
+      await expect(date).toHaveAttribute("datetime", "2026-11-03");
+      await calendar.fill("2026-11-02");
+      await expect(date).toHaveAttribute("datetime", "2026-11-02");
+      await page.locator(".activity").screenshot({
+        path: testInfo.outputPath(
+          `overview-controls-${thai ? "th" : "en"}-${theme}.png`,
+        ),
+        animations: "disabled",
+        style: "header, .activity-tabs { position: static !important; }",
+      });
+      await page.locator(".theme-toggle").click();
+    }
+  }
+});
+
 test("Senior view persists on this device and hides editing tabs", async ({
   page,
 }, testInfo) => {

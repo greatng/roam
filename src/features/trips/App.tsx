@@ -1,4 +1,5 @@
 import { RoamLogo } from "../../shared/RoamLogo";
+import { ActionIcon } from "../../shared/ActionIcon";
 import { Button } from "../../shared/ui/Button";
 import { IconButton } from "../../shared/ui/IconButton";
 import { ThemeChoice } from "../../shared/ui/ThemeChoice";
@@ -299,6 +300,18 @@ export function App() {
     return r.data;
   }
   const tripChoices = trips.data?.filter((trip) => trip.id !== selectedId);
+  const showTripControls =
+    members.data && trips.data?.some((trip) => trip.id === selectedId);
+  const refreshStatus = (
+    <Button
+      type="button"
+      size="small"
+      prefix={<ActionIcon kind="refresh" />}
+      onClick={() => void qc.invalidateQueries()}
+    >
+      {t("Refresh status", "ตรวจสอบสถานะล่าสุด")}
+    </Button>
+  );
   return (
     <>
       <header ref={appHeader}>
@@ -631,11 +644,7 @@ export function App() {
             </form>
           </details>
         )}
-        {uid && (
-          <Button onClick={() => void qc.invalidateQueries()}>
-            {t("Refresh status", "ตรวจสอบสถานะล่าสุด")}
-          </Button>
-        )}
+        {uid && !showTripControls && refreshStatus}
         {requests.data
           ?.filter((r) => r.auth_user_id === uid)
           .map((r) => (
@@ -720,6 +729,7 @@ export function App() {
                     members={members.data}
                     uid={uid}
                     thai={thai.value}
+                    refreshStatus={refreshStatus}
                     tripSettings={
                       <>
                         <h3>{t("Travelers", "ผู้เดินทาง")}</h3>
@@ -895,13 +905,7 @@ export function App() {
                                   {t("Add traveler", "เพิ่มผู้เดินทาง")}
                                 </Button>
                               </form>
-                              {uid && (
-                                <Button
-                                  onClick={() => void qc.invalidateQueries()}
-                                >
-                                  {t("Refresh status", "ตรวจสอบสถานะล่าสุด")}
-                                </Button>
-                              )}
+                              {refreshStatus}
                               {requests.data
                                 ?.filter(
                                   (r) =>
