@@ -69,6 +69,7 @@ async function installFixture(
     linkedMember?: boolean;
     daily?: boolean;
     longHotel?: boolean;
+    extraTrip?: boolean;
     taggedActivity?: boolean;
     failReceiptUploadOnce?: boolean;
     seedReceipt?: boolean;
@@ -96,7 +97,20 @@ async function installFixture(
       emergency_contact_phone: "+66 81 234 5678",
     },
   ];
-  const trips = [trip];
+  const trips = [
+    trip,
+    ...(options.extraTrip
+      ? [
+          {
+            ...trip,
+            id: "22222222-2222-4222-8222-222222222223",
+            title: "Chiang Mai Weekend",
+            start_date: "2026-11-05",
+            end_date: "2026-11-08",
+          },
+        ]
+      : []),
+  ];
   let invites = options.invites ?? [];
   const members = [
     {
@@ -701,13 +715,13 @@ async function installFixture(
 async function openTrip(page: import("@playwright/test").Page) {
   const dashboard = page.getByRole("region", { name: "Choose a trip" });
   const tripCard = dashboard.getByRole("button", { name: /Bangkok Weekend/ });
-  await expect(tripCard).toBeVisible();
-  await tripCard.click();
-  await expect(tripCard).toHaveAttribute("aria-pressed", "true");
-  await expect(
-    page.getByRole("heading", { name: "Bangkok Weekend" }),
-  ).toBeVisible();
-  return tripCard;
+  const heading = page.getByRole("heading", {
+    name: "Bangkok Weekend",
+    exact: true,
+  });
+  await expect(tripCard.or(heading)).toBeVisible();
+  if (await tripCard.isVisible()) await tripCard.click();
+  await expect(heading).toBeVisible();
 }
 
 async function expectInViewport(locator: import("@playwright/test").Locator) {
@@ -1542,11 +1556,9 @@ test("mocked enrolled itinerary and expense flow; keyboard and labels; preview c
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Roam" })).toBeFocused();
   await openTrip(page);
-  await expect(
-    page
-      .getByRole("region", { name: "Choose a trip" })
-      .locator('[aria-pressed="true"]'),
-  ).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Choose a trip" })).toHaveCount(
+    0,
+  );
   await expect(page.getByRole("heading", { name: "Wat Arun" })).toBeVisible();
   await expect(
     page.locator(".next-stop").getByRole("link", { name: "Open directions" }),
@@ -3659,7 +3671,7 @@ test("Preparation shares item names and keeps checkmarks and private lists per t
   );
 });
 
-test("trip tabs show icons in one bordered row and scroll on narrow screens", async ({
+test("trip tabs dock on mobile and stay inline on desktop", async ({
   page,
 }, testInfo) => {
   const narrow = testInfo.project.name === "mobile-chromium";
@@ -3667,8 +3679,9 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   await page.emulateMedia({ colorScheme: "light" });
   await installFixture(page);
   await page.goto("/");
-  const card = await openTrip(page);
   const dashboard = page.getByRole("region", { name: "Choose a trip" });
+  const card = dashboard.getByRole("button", { name: /Bangkok Weekend/ });
+  await expect(card).toBeVisible();
   const dashboardHeading = dashboard.getByRole("heading", {
     name: "Your trips",
   });
@@ -3685,7 +3698,11 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
     .getByText("2026-11-01 — 2026-11-04", { exact: true })
     .boundingBox();
   expect(dates!.y).toBeGreaterThanOrEqual(title!.y + title!.height);
+  expect((await card.boundingBox())!.height).toBeLessThan(66);
+  await openTrip(page);
+  await expect(dashboard).toHaveCount(0);
   const nav = page.getByRole("navigation", { name: "Trip sections" });
+  await expect(nav).toHaveCount(1);
   const buttons = nav.getByRole("button");
   await expect(buttons).toHaveText([
     "Overview",
@@ -3704,13 +3721,13 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   const metadata = await workspace.locator(":scope > p").boundingBox();
   expect(metadata!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height);
   expect(metadata!.y - heading!.y - heading!.height).toBeLessThan(4);
-  expect((await card.boundingBox())!.height).toBeLessThan(66);
 
   for (const theme of ["light", "dark"]) {
     if (theme === "dark") {
       await page.getByRole("button", { name: "Switch to dark mode" }).click();
     }
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(nav).toHaveCSS("position", narrow ? "fixed" : "static");
     await expect(
       nav.locator('button[aria-current="page"] .app-button__label'),
     ).toHaveCSS("text-decoration-line", "underline");
@@ -3720,7 +3737,6 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
         const selected = row.querySelector('[aria-current="page"]')!;
         const border = getComputedStyle(row);
         return {
-          scrollable: row.scrollWidth > row.clientWidth,
           rows: new Set(buttons.map((button) => button.offsetTop)).size,
           pageFits: document.documentElement.scrollWidth <= innerWidth,
           hasBorder: [
@@ -3738,7 +3754,6 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
         };
       }),
     ).toEqual({
-      scrollable: narrow,
       rows: 1,
       pageFits: true,
       hasBorder: true,
@@ -3765,6 +3780,28 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
     const viewBounds = (await viewToggle.boundingBox())!;
     const dayBounds = (await firstDay.boundingBox())!;
     expect(dayBounds.y - viewBounds.y - viewBounds.height).toBeLessThan(12);
+    if (narrow) {
+      const bar = (await nav.boundingBox())!;
+      const fab = itinerary.getByRole("button", { name: "Edit itinerary" });
+      const trigger = (await fab.boundingBox())!;
+      expect(trigger.y + trigger.height).toBeLessThan(bar.y);
+      await fab.tap();
+      const menu = itinerary.getByRole("menu", { name: "Itinerary actions" });
+      await expect(menu).toBeInViewport({ ratio: 1 });
+      const panel = (await menu.boundingBox())!;
+      expect(panel.y + panel.height).toBeLessThan(bar.y);
+      await menu.getByRole("menuitem", { name: "Add activity" }).tap();
+      const save = itinerary.getByRole("button", { name: "Save activity" });
+      await expect(
+        itinerary.locator(".plan-activity-editor form"),
+      ).toBeFocused();
+      await save.evaluate((button) =>
+        button.scrollIntoView({ block: "center", behavior: "instant" }),
+      );
+      const action = (await save.boundingBox())!;
+      expect(action.y + action.height).toBeLessThan(bar.y);
+      await itinerary.getByRole("button", { name: "Cancel" }).tap();
+    }
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: testInfo.outputPath(`trip-itinerary-${theme}.png`),
@@ -3785,21 +3822,34 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   await expect(
     nav.getByRole("button", { name: "Trip", exact: true }),
   ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText(/^2026-11-01 — 2026-11-04/)).toHaveCount(1);
   if (narrow) {
+    await page.addStyleTag({
+      content: ".activity-tabs button { min-width: 80px; }",
+    });
+    await buttons.first().focus();
+    for (let index = 1; index < 5; index++) {
+      await page.keyboard.press("Tab");
+      await expect(buttons.nth(index)).toBeFocused();
+    }
     await expect
       .poll(() => nav.evaluate((row) => row.scrollLeft))
       .toBeGreaterThan(0);
-    // Wider controls can wrap the sticky app header on a narrow screen.
-    await page.addStyleTag({ content: "header { column-gap: 2rem; }" });
     await page.evaluate(() => window.scrollBy(0, 500));
-    await expect
-      .poll(async () => {
-        const header = (await page.getByRole("banner").boundingBox())!;
-        const row = (await nav.boundingBox())!;
-        const gap = row.y - (header.y + header.height);
-        return header.height > 68 && gap >= 0 && gap <= 1;
-      })
-      .toBe(true);
+    const row = (await nav.boundingBox())!;
+    expect(row.y + row.height).toBeCloseTo(page.viewportSize()!.height, 0);
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty(
+        "--trip-tab-safe-area",
+        "24px",
+      ),
+    );
+    const insetRow = (await nav.boundingBox())!;
+    expect(insetRow.height - row.height).toBeCloseTo(24, 0);
+    expect(insetRow.y + insetRow.height).toBeCloseTo(
+      page.viewportSize()!.height,
+      0,
+    );
   }
 
   await page.route(/\/rest\/v1\/trips(?:\?|$)/, (route) =>
@@ -3809,6 +3859,36 @@ test("trip tabs show icons in one bordered row and scroll on narrow screens", as
   const empty = dashboard.getByText("No approved trips yet.", { exact: false });
   await expect(empty).toBeVisible();
   expect(await gapBelowHeading(empty)).toBeLessThan(4);
+});
+
+test("switching trips keeps one active header and lists the remaining trip", async ({
+  page,
+}, testInfo) => {
+  await installFixture(page, { extraTrip: true });
+  await page.goto("/");
+  const dashboard = page.getByRole("region", { name: "Choose a trip" });
+  await expect(dashboard.getByRole("button")).toHaveCount(2);
+  await openTrip(page);
+  await expect(page.getByText("Bangkok Weekend", { exact: true })).toHaveCount(
+    1,
+  );
+  await expect(page.getByText(/^2026-11-01 — 2026-11-04/)).toHaveCount(1);
+  const next = dashboard.getByRole("button", { name: /Chiang Mai Weekend/ });
+  if (testInfo.project.use.hasTouch) await next.tap();
+  else await next.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Chiang Mai Weekend" }),
+  ).toBeFocused();
+  await expect(page.getByText(/^2026-11-05 — 2026-11-08/)).toHaveCount(1);
+  await expect(
+    dashboard.getByRole("button", { name: /Bangkok Weekend/ }),
+  ).toBeVisible();
+  await expect(next).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Chiang Mai Weekend" }),
+  ).toBeVisible();
+  await expect(next).toHaveCount(0);
 });
 
 test("activity category stays a small pill in both themes and languages", async ({
@@ -3821,7 +3901,6 @@ test("activity category stays a small pill in both themes and languages", async 
   await installFixture(page, { taggedActivity: true });
   await page.goto("/");
   await openTrip(page);
-  await page.getByRole("button", { name: "Itinerary", exact: true }).click();
   const activity = page.locator(".plan-activity").filter({
     has: page.getByText("Chatuchak Market", { exact: true }),
   });
@@ -3832,11 +3911,32 @@ test("activity category stays a small pill in both themes and languages", async 
     if (locale === "th") {
       await page.getByRole("button", { name: "ไทย / English" }).click();
     }
-    await expect(tag).toHaveText(
-      locale === "en" ? "Sightseeing" : "เที่ยวชมสถานที่",
-    );
+    const category = locale === "en" ? "Sightseeing" : "เที่ยวชมสถานที่";
     for (const theme of ["light", "dark"]) {
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const tabs = page.locator(".activity-tabs").getByRole("button");
+      await tabs.first().click();
+      for (const heading of [
+        page.locator(".next-stop .overview-activity-title"),
+        page.locator(".stop .overview-activity-title").filter({
+          hasText: "Chatuchak Market",
+        }),
+      ]) {
+        await expect(heading.locator(".activity-tag")).toHaveText(category);
+        const gap = await heading.evaluate((row) => {
+          const title = row.firstElementChild!.getBoundingClientRect();
+          const pill = row.lastElementChild!.getBoundingClientRect();
+          return pill.top >= title.bottom
+            ? pill.top - title.bottom
+            : pill.left - title.right;
+        });
+        expect(gap).toBeGreaterThanOrEqual(5);
+      }
+      await page.locator(".next-stop .overview-activity-title").screenshot({
+        path: testInfo.outputPath(`overview-tag-${locale}-${theme}.png`),
+      });
+      await tabs.nth(1).click();
+      await expect(tag).toHaveText(category);
       await activity.screenshot({
         path: testInfo.outputPath(`activity-tag-${locale}-${theme}.png`),
         animations: "disabled",
