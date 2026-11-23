@@ -58,6 +58,7 @@ header {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.8rem max(1rem, calc((100vw - 1080px) / 2));
+  padding-top: calc(0.8rem + env(safe-area-inset-top));
   background: var(--page);
   border-bottom: 1px solid var(--line);
 }
@@ -523,9 +524,9 @@ details > summary:where(:hover) {
     margin: 0;
   }
   .activity-tabs {
-    position: sticky;
-    top: var(--app-header-height, 68px);
-    z-index: 3;
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 6;
   }
   section,
   form {
@@ -609,10 +610,32 @@ details > summary:where(:hover) {
     padding: 0.45rem 0;
   }
   .activity-tabs {
-    margin: 0.35rem 0 0.6rem;
+    min-height: var(--trip-tab-bar-height);
+    margin: 0;
+    gap: 0.15rem;
+    padding: 0.25rem max(0.4rem, env(safe-area-inset-right))
+      calc(0.25rem + var(--trip-tab-safe-area))
+      max(0.4rem, env(safe-area-inset-left));
+    border-radius: 14px 14px 0 0;
+    overscroll-behavior-inline: contain;
   }
   .activity-tabs button {
-    font-size: 0.88rem;
+    flex: 1 0 auto;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 64px;
+    min-height: 56px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.78rem;
+  }
+  :root:has(.activity-tabs) {
+    --trip-tab-safe-area: env(safe-area-inset-bottom, 0px);
+    --trip-tab-bar-height: calc(58px + 0.5rem + var(--trip-tab-safe-area));
+    scroll-padding-block-end: calc(var(--trip-tab-bar-height) + 0.5rem);
+  }
+  main:has(.activity-tabs) {
+    padding-bottom: calc(var(--trip-tab-bar-height) + 1rem);
   }
   .next-stop {
     padding: 0.9rem;
@@ -744,7 +767,7 @@ details > summary:where(:hover) {
   inset-inline-end: 0;
   top: calc(100% + 0.5rem);
   width: min(20rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 5rem);
+  max-height: calc(100dvh - 5rem - var(--trip-tab-bar-height, 0px));
   overflow-y: auto;
   margin: 0;
   background: var(--surface-raised);
@@ -806,16 +829,6 @@ details > summary:where(:hover) {
 .trip-cards button:hover:not(:disabled) {
   background: var(--surface-soft);
 }
-.trip-cards button[aria-pressed="true"],
-.trip-cards button[aria-pressed="true"]:hover:not(:disabled) {
-  background: var(--selected-surface);
-  color: var(--selected-text);
-  box-shadow: inset 0 0 0 1px var(--selected-line), inset 4px 0 var(--selected-line);
-}
-.trip-cards button[aria-pressed="true"] strong {
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
 .trip-cards button:active:not(:disabled) {
   background: var(--selected-surface);
 }
@@ -826,6 +839,7 @@ details > summary:where(:hover) {
 }
 .trip-workspace > h2 {
   margin-block: 0 0.15rem;
+  scroll-margin-block-start: calc(var(--app-header-height, 68px) + 0.5rem);
 }
 .trip-workspace > p {
   margin-block: 0;
@@ -1149,6 +1163,9 @@ button.account-toggle[aria-expanded="true"] {
 @media (max-width: 560px) {
   header {
     gap: 0.35rem;
+    padding-top: calc(0.35rem + env(safe-area-inset-top));
+    padding-inline: max(0.55rem, env(safe-area-inset-left))
+      max(0.55rem, env(safe-area-inset-right));
   }
 }
 .theme-toggle svg,
@@ -1743,6 +1760,12 @@ button.itinerary-fab {
 }
 .plan-organizer-actions { right: max(1.25rem, env(safe-area-inset-right)); }
 @media (max-width: 560px) {
+  .activity:has(.activity-tabs) .plan-organizer-actions {
+    bottom: calc(var(--trip-tab-bar-height) + 0.65rem);
+  }
+  .activity:has(.activity-tabs) .plan-organizer-actions > .overflow-panel {
+    max-height: calc(100dvh - var(--trip-tab-bar-height) - 7rem);
+  }
   .plan > .plan-nights.itinerary-timeline { padding-left: 0.85rem; }
   .plan-organizer-actions { right: max(1.25rem, env(safe-area-inset-right)); }
 }
@@ -1846,6 +1869,21 @@ button.itinerary-fab {
   font-weight: 700;
   line-height: 1.4;
   vertical-align: middle;
+}
+.overview-stop-heading,
+.overview-activity-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+.overview-stop-heading .stop-number {
+  flex: none;
+  margin-inline-end: 0;
+}
+.overview-activity-title {
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .activity-tag[data-tag="transport"] { --tag-color: #255e95; }
 .activity-tag[data-tag="food"] { --tag-color: #8b420f; }

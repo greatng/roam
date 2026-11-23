@@ -73,6 +73,13 @@ export function App() {
   const joinHeading = useRef<HTMLHeadingElement>(null);
   const focusJoinAfterPaste = useRef(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const tripHeading = useRef<HTMLHeadingElement>(null);
+  const focusTripHeading = useRef(false);
+  useLayoutEffect(() => {
+    if (!focusTripHeading.current || !tripHeading.current) return;
+    focusTripHeading.current = false;
+    revealEditor(tripHeading.current);
+  }, [selectedId]);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutWarning, setSignOutWarning] = useState(false);
   const accountControl = useRef<HTMLDivElement>(null);
@@ -291,6 +298,7 @@ export function App() {
     if (r.error) throw r.error;
     return r.data;
   }
+  const tripChoices = trips.data?.filter((trip) => trip.id !== selectedId);
   return (
     <>
       <header ref={appHeader}>
@@ -643,42 +651,46 @@ export function App() {
                     )}
             </p>
           ))}
-        {uid && trips.data && (
-          <section
-            class="trip-dashboard"
-            aria-label={t("Choose a trip", "เลือกทริป")}
-          >
-            <h2>{t("Your trips", "ทริปของคุณ")}</h2>
-            {trips.data.length === 0 && (
-              <p>
-                {t(
-                  "No approved trips yet. Create a trip or join with an invitation.",
-                  "คุณยังไม่มีทริปที่เข้าร่วมแล้ว สร้างทริปใหม่หรือใช้คำเชิญเพื่อเข้าร่วม",
-                )}
-              </p>
-            )}
-            <div class="trip-cards">
-              {trips.data.map((trip) => (
-                <Button
-                  type="button"
-                  key={trip.id}
-                  aria-pressed={selectedId === trip.id}
-                  onClick={() => selectTrip(trip.id)}
-                >
-                  <strong>{trip.title}</strong>
-                  <span>
-                    {trip.start_date} — {trip.end_date}
-                  </span>
-                  <small>
-                    {trip.status === "archived"
-                      ? t("Archived", "เก็บถาวรแล้ว")
-                      : t("Active", "ใช้งานอยู่")}
-                  </small>
-                </Button>
-              ))}
-            </div>
-          </section>
-        )}
+        {uid &&
+          tripChoices &&
+          (tripChoices.length > 0 || !trips.data?.length) && (
+            <section
+              class="trip-dashboard"
+              aria-label={t("Choose a trip", "เลือกทริป")}
+            >
+              <h2>{t("Your trips", "ทริปของคุณ")}</h2>
+              {!tripChoices.length && (
+                <p>
+                  {t(
+                    "No approved trips yet. Create a trip or join with an invitation.",
+                    "คุณยังไม่มีทริปที่เข้าร่วมแล้ว สร้างทริปใหม่หรือใช้คำเชิญเพื่อเข้าร่วม",
+                  )}
+                </p>
+              )}
+              <div class="trip-cards">
+                {tripChoices.map((trip) => (
+                  <Button
+                    type="button"
+                    key={trip.id}
+                    onClick={() => {
+                      focusTripHeading.current = true;
+                      selectTrip(trip.id);
+                    }}
+                  >
+                    <strong>{trip.title}</strong>
+                    <span>
+                      {trip.start_date} — {trip.end_date}
+                    </span>
+                    <small>
+                      {trip.status === "archived"
+                        ? t("Archived", "เก็บถาวรแล้ว")
+                        : t("Active", "ใช้งานอยู่")}
+                    </small>
+                  </Button>
+                ))}
+              </div>
+            </section>
+          )}
         {trips.data
           ?.filter((trip) => trip.id === selectedId)
           .map((trip) => {
@@ -691,7 +703,9 @@ export function App() {
             );
             return (
               <section class="trip-workspace" key={trip.id}>
-                <h2>{trip.title}</h2>
+                <h2 ref={tripHeading} tabIndex={-1}>
+                  {trip.title}
+                </h2>
                 <p>
                   {trip.start_date} — {trip.end_date} · {trip.base_currency} ·{" "}
                   {t(

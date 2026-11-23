@@ -1410,8 +1410,8 @@ export function TripActivity({
                       )}
                     </strong>
                   )}
-                  <h3>
-                    {heroStop.title}{" "}
+                  <h3 class="overview-activity-title">
+                    <span>{heroStop.title}</span>{" "}
                     <ActivityTagBadge tag={heroStop.activity_tag} thai={thai} />
                   </h3>
                   <p>
@@ -1550,10 +1550,12 @@ export function TripActivity({
                   class={`stop ${isActualToday && today.current?.id === item.id ? "current-activity" : isActualToday && today.next?.id === item.id ? "next-activity" : ""}`}
                   key={item.id}
                 >
-                  <div>
+                  <div class="overview-stop-heading">
                     <span class="stop-number">{index + 1}</span>
-                    <strong>{item.title}</strong>
-                    <ActivityTagBadge tag={item.activity_tag} thai={thai} />
+                    <div class="overview-activity-title">
+                      <strong>{item.title}</strong>{" "}
+                      <ActivityTagBadge tag={item.activity_tag} thai={thai} />
+                    </div>
                   </div>
                   {item.starts_at && (
                     <p>
@@ -2225,10 +2227,6 @@ export function TripActivity({
       ) : (
         <>
           <h3>{tr("Trip details", "รายละเอียดทริป")}</h3>
-          <p>
-            {trip.start_date} — {trip.end_date}
-          </p>
-
           <p>
             {tr("Trip status", "สถานะทริป")}:{" "}
             {tr(
