@@ -623,11 +623,11 @@ details > summary:where(:hover) {
     flex: 1 0 auto;
     flex-direction: column;
     gap: 0.2rem;
-    min-width: 64px;
+    min-width: 44px;
     min-height: 56px;
-    padding: 0.3rem 0.5rem;
+    padding: 0.3rem 0.25rem;
     border-radius: 10px;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
   }
   :root:has(.activity-tabs) {
     --trip-tab-safe-area: env(safe-area-inset-bottom, 0px);

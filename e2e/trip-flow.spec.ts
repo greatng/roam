@@ -3737,7 +3737,6 @@ test("trip tabs dock on mobile and stay inline on desktop", async ({
         const selected = row.querySelector('[aria-current="page"]')!;
         const border = getComputedStyle(row);
         return {
-          scrollable: row.scrollWidth > row.clientWidth,
           rows: new Set(buttons.map((button) => button.offsetTop)).size,
           pageFits: document.documentElement.scrollWidth <= innerWidth,
           hasBorder: [
@@ -3755,7 +3754,6 @@ test("trip tabs dock on mobile and stay inline on desktop", async ({
         };
       }),
     ).toEqual({
-      scrollable: narrow,
       rows: 1,
       pageFits: true,
       hasBorder: true,
@@ -3826,6 +3824,14 @@ test("trip tabs dock on mobile and stay inline on desktop", async ({
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByText(/^2026-11-01 — 2026-11-04/)).toHaveCount(1);
   if (narrow) {
+    await page.addStyleTag({
+      content: ".activity-tabs button { min-width: 80px; }",
+    });
+    await buttons.first().focus();
+    for (let index = 1; index < 5; index++) {
+      await page.keyboard.press("Tab");
+      await expect(buttons.nth(index)).toBeFocused();
+    }
     await expect
       .poll(() => nav.evaluate((row) => row.scrollLeft))
       .toBeGreaterThan(0);
