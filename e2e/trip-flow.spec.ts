@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { expect, test, type Locator } from "@playwright/test";
+import { errors, expect, test, type Locator } from "@playwright/test";
 import sharp from "sharp";
 
 async function chooseOverflowAction(
@@ -3654,6 +3654,62 @@ test("captures compact mobile Overview and Itinerary in light and dark themes", 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await capture("itinerary", "light");
 });
+
+for (const browserEvent of ["visibilitychange", "focus"] as const) {
+  test(`returning to a loaded browser tab via ${browserEvent} does not refetch`, async ({
+    page,
+  }) => {
+    await installFixture(page);
+    let reads = 0;
+    const checklistUrl = /\/rest\/v1\/trip_preparation_items\?/;
+    await page.route(checklistUrl, (route) => {
+      reads++;
+      return route.fulfill({ json: [{ id: "passport", title: "Passport" }] });
+    });
+    await page.goto("/");
+    await openTrip(page);
+    await page.getByRole("button", { name: "Preparation" }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "Passport" }),
+    ).toBeVisible();
+    expect(reads).toBe(1);
+
+    // Chromium headless does not consistently hide a page behind another tab.
+    const readOnReturn = page
+      .waitForRequest(checklistUrl, { timeout: 750 })
+      .then(
+        () => true,
+        (error) => {
+          if (error instanceof errors.TimeoutError) return false;
+          throw error;
+        },
+      );
+    await page.evaluate((event) => {
+      const setVisibility = (state: DocumentVisibilityState) => {
+        Object.defineProperty(document, "visibilityState", {
+          configurable: true,
+          value: state,
+        });
+        if (event === "visibilitychange")
+          document.dispatchEvent(
+            new Event("visibilitychange", { bubbles: true }),
+          );
+      };
+      try {
+        setVisibility("hidden");
+        setVisibility("visible");
+        if (event === "focus") window.dispatchEvent(new Event("focus"));
+      } finally {
+        Reflect.deleteProperty(document, "visibilityState");
+      }
+    }, browserEvent);
+    expect(await readOnReturn).toBe(false);
+    expect(reads).toBe(1);
+
+    await page.getByRole("button", { name: "Refresh status" }).click();
+    await expect.poll(() => reads).toBe(2);
+  });
+}
 
 test("Preparation shares item names and keeps checkmarks and private lists per traveler", async ({
   page,
