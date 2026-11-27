@@ -12,7 +12,6 @@ import { ActionIcon } from "../../shared/ActionIcon";
 import { Button } from "../../shared/ui/Button";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { refetchInvalidatedOnMount } from "../../shared/query/refetchInvalidatedOnMount";
 import { supabase } from "../../shared/supabase/client";
 import { cacheTripData, readCachedTripData } from "../offline/db";
 import { expandDateRange, formatDateLabel } from "./dates";
@@ -130,7 +129,6 @@ export function Plan({
   const activityEditorRef = useRef<HTMLFormElement>(null);
   const nights = useQuery({
     queryKey: ["plan-nights", uid, trip.id],
-    refetchOnMount: refetchInvalidatedOnMount,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("nightly_destinations")
@@ -155,7 +153,6 @@ export function Plan({
   });
   const stays = useQuery({
     queryKey: ["plan-stays", uid, trip.id],
-    refetchOnMount: refetchInvalidatedOnMount,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stays")
@@ -180,7 +177,6 @@ export function Plan({
   });
   const activities = useQuery({
     queryKey: ["plan-activities", uid, trip.id],
-    refetchOnMount: refetchInvalidatedOnMount,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("itinerary_items")

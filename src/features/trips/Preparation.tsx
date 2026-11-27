@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/preact-query";
 import { useRef, useState } from "preact/hooks";
 import { ActionIcon } from "../../shared/ActionIcon";
 import { IconButton } from "../../shared/ui/IconButton";
-import { refetchInvalidatedOnMount } from "../../shared/query/refetchInvalidatedOnMount";
 import { supabase } from "../../shared/supabase/client";
 
 type Item = { id: string; title: string };
@@ -46,7 +45,6 @@ export function Preparation({
   const queryKey = ["trip-preparation", uid, tripId];
   const shared = useQuery({
     queryKey,
-    refetchOnMount: refetchInvalidatedOnMount,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trip_preparation_items")

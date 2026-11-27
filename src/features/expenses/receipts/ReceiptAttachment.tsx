@@ -1,6 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
 import { useQuery, useQueryClient } from "@tanstack/preact-query";
-import { refetchInvalidatedOnMount } from "../../../shared/query/refetchInvalidatedOnMount";
 import { supabase } from "../../../shared/supabase/client";
 import { Button } from "../../../shared/ui/Button";
 import { compressReceipt, type CompressedReceipt } from "./compress";
@@ -40,7 +39,6 @@ export function ReceiptAttachment({
   const queryKey = ["expense-receipt", tripId, expenseId, uid];
   const receiptQuery = useQuery({
     queryKey,
-    refetchOnMount: refetchInvalidatedOnMount,
     queryFn: () => loadExpenseReceipt(expenseId, tripId),
   });
   const receipt = receiptQuery.data as ExpenseReceipt | null | undefined;

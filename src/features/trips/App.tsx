@@ -31,7 +31,9 @@ import {
   readCachedTripData,
 } from "../offline/db";
 
-export const qc = new QueryClient();
+export const qc = new QueryClient({
+  defaultOptions: { queries: { refetchOnWindowFocus: false } },
+});
 const thai = signal(false);
 const t = (en: string, th: string) => (thai.value ? th : en);
 type TripRow = {
@@ -190,17 +192,27 @@ export function App() {
   useEffect(() => {
     const routeChange = () => setRoute(location.hash);
     window.addEventListener("hashchange", routeChange);
-    const { data } = db.auth.onAuthStateChange((_e, s) => {
-      setUid(s?.user.id);
-      setUser(s?.user ?? null);
-      setQr(null);
-      qc.clear();
+    let sessionUserId: string | undefined;
+    const { data } = db.auth.onAuthStateChange((event, session) => {
+      const next = session?.user.id;
+      const isSameUserRefresh =
+        next !== undefined &&
+        sessionUserId === next &&
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED");
+      sessionUserId = next;
+      setUid(next);
+      setUser(session?.user ?? null);
+      // Supabase can emit SIGNED_IN when a visible tab recovers its session.
+      if (!isSameUserRefresh) {
+        setQr(null);
+        qc.clear();
+      }
       const previous = localStorage.getItem("travelmate-local-user");
-      if (previous && previous !== s?.user.id) void clearAllLocalData();
-      if (s?.user.id) localStorage.setItem("travelmate-local-user", s.user.id);
+      if (previous && previous !== next) void clearAllLocalData();
+      if (next) localStorage.setItem("travelmate-local-user", next);
       localStorage.setItem(
         "paikan-cache-disabled",
-        s?.user.id ? "false" : "true",
+        next ? "false" : "true",
       );
     });
     void db.auth.getSession().then(({ data }) => {
@@ -212,14 +224,12 @@ export function App() {
       setUid(next);
       setUser(data.session?.user ?? null);
     });
-    const resume = () => void qc.invalidateQueries();
-    window.addEventListener("focus", resume);
-    window.addEventListener("online", resume);
+    const refreshOnReconnect = () => void qc.invalidateQueries();
+    window.addEventListener("online", refreshOnReconnect);
     return () => {
       data.subscription.unsubscribe();
       window.removeEventListener("hashchange", routeChange);
-      window.removeEventListener("focus", resume);
-      window.removeEventListener("online", resume);
+      window.removeEventListener("online", refreshOnReconnect);
     };
   }, []);
   const trips = useQuery({
