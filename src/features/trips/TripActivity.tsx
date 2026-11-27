@@ -766,7 +766,12 @@ export function TripActivity({
     setEditing(null);
     setStopEditorOpen(false);
     setNotice(tr("Stop saved.", "บันทึกจุดหมายแล้ว"));
-    await itineraryQuery.refetch();
+    await Promise.all([
+      itineraryQuery.refetch(),
+      queryClient.invalidateQueries({
+        queryKey: ["plan-activities", uid, trip.id],
+      }),
+    ]);
   }
   async function deleteItem(item: Item) {
     const { error } = await supabase.rpc("delete_itinerary_item", {
@@ -789,7 +794,12 @@ export function TripActivity({
       return;
     }
     setNotice(tr("Stop deleted.", "ลบจุดหมายแล้ว"));
-    await itineraryQuery.refetch();
+    await Promise.all([
+      itineraryQuery.refetch(),
+      queryClient.invalidateQueries({
+        queryKey: ["plan-activities", uid, trip.id],
+      }),
+    ]);
   }
   async function recordSettlement(
     from: string,

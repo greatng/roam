@@ -3267,6 +3267,16 @@ test.describe("Daily itinerary browser regressions", () => {
     });
     await page.goto("/");
     await openTrip(page);
+    const tabs = page.getByRole("navigation", { name: "Trip sections" });
+    const itinerary = page.getByRole("region", { name: "Trip itinerary" });
+    const itineraryTab = tabs.getByRole("button", {
+      name: "Itinerary",
+      exact: true,
+    });
+    await itineraryTab.click();
+    await expect(itinerary.getByText("Wat Arun", { exact: true })).toBeVisible();
+    await tabs.getByRole("button", { name: "Overview", exact: true }).click();
+
     const overview = page.locator(".activity");
     const editStop = overview
       .getByRole("button", { name: "Edit stop" })
@@ -3288,6 +3298,11 @@ test.describe("Daily itinerary browser regressions", () => {
         p_expected_version: 1,
         p_title: "Wat Arun Updated",
       });
+    await itineraryTab.click();
+    await expect(
+      itinerary.getByText("Wat Arun Updated", { exact: true }),
+    ).toBeVisible();
+    await tabs.getByRole("button", { name: "Overview", exact: true }).click();
     await overview
       .getByRole("button", { name: "Options for River House" })
       .click();
@@ -3653,6 +3668,119 @@ test("captures compact mobile Overview and Itinerary in light and dark themes", 
   await capture("itinerary", "dark");
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await capture("itinerary", "light");
+});
+
+test("trip tab switches reuse loaded queries and Refresh reloads them", async ({
+  page,
+}) => {
+  const fixture = await installFixture(page, { seedReceipt: true });
+  await page.route("**/rest/v1/trip_preparation_items*", (route) =>
+    route.fulfill({ json: [{ id: "passport", title: "Passport" }] }),
+  );
+  let checklistRequests = 0;
+  let receiptRequests = 0;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (request.method() !== "GET") return;
+    if (url.pathname.endsWith("/trip_preparation_items")) checklistRequests++;
+    if (
+      url.pathname.endsWith("/expense_receipts") &&
+      url.searchParams.get("expense_id") === "eq.expense-1"
+    )
+      receiptRequests++;
+  });
+
+  const requestCounts = () => {
+    const reads = fixture
+      .getRestRequests()
+      .filter(({ method }) => method === "GET");
+    const count = (table: string) =>
+      reads.filter((read) => read.table === table).length;
+    return {
+      nights: count("nightly_destinations"),
+      stays: count("stays"),
+      activities: count("itinerary_items"),
+      receipts: receiptRequests,
+      checklist: checklistRequests,
+    };
+  };
+
+  await page.goto("/");
+  await openTrip(page);
+  const tabs = page.getByRole("navigation", { name: "Trip sections" });
+  const showItinerary = async () => {
+    await tabs.getByRole("button", { name: "Itinerary", exact: true }).click();
+    await expect(
+      page
+        .getByRole("region", { name: "Trip itinerary" })
+        .getByText("Wat Arun", { exact: true }),
+    ).toBeVisible();
+  };
+  const showPreparation = async () => {
+    await tabs.getByRole("button", { name: "Preparation" }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "Passport" }),
+    ).toBeVisible();
+  };
+  const showExpenses = async () => {
+    await tabs.getByRole("button", { name: "Expenses" }).click();
+    await expect(
+      page.getByText("Receipt photo", { exact: true }),
+    ).toBeVisible();
+  };
+
+  await showItinerary();
+  await showPreparation();
+  await showExpenses();
+  const loaded = {
+    nights: 2,
+    stays: 2,
+    activities: 2,
+    receipts: 1,
+    checklist: 1,
+  };
+  expect(requestCounts()).toEqual(loaded);
+
+  await showItinerary();
+  await showPreparation();
+  await showExpenses();
+  await tabs.getByRole("button", { name: "Itinerary", exact: true }).click();
+  expect(requestCounts()).toEqual(loaded);
+
+  await page.getByRole("button", { name: "Refresh status" }).click();
+  await expect.poll(requestCounts).toEqual({
+    nights: loaded.nights + 2,
+    stays: loaded.stays + 2,
+    activities: loaded.activities + 2,
+    receipts: loaded.receipts,
+    checklist: loaded.checklist,
+  });
+
+  // Refresh also invalidates the inactive queries so they reload on return.
+  await showPreparation();
+  await showExpenses();
+  const refreshed = {
+    nights: loaded.nights + 2,
+    stays: loaded.stays + 2,
+    activities: loaded.activities + 2,
+    receipts: loaded.receipts + 1,
+    checklist: loaded.checklist + 1,
+  };
+  await expect.poll(requestCounts).toEqual(refreshed);
+
+  const receiptRefetch = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.endsWith("/expense_receipts") &&
+      url.searchParams.get("expense_id") === "eq.expense-1" &&
+      response.ok()
+    );
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await receiptRefetch;
+  await expect
+    .poll(() => requestCounts().receipts)
+    .toBe(refreshed.receipts + 1);
 });
 
 test("Preparation shares item names and keeps checkmarks and private lists per traveler", async ({
